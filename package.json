@@ -1,0 +1,15 @@
+{
+  "name": "cnb-issue-pr-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CNB 仓库 Issue / PR 手机端管理工具",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npm run dev --prefix web",
+    "build": "npm install --prefix web && npm run build --prefix web",
+    "postinstall": "npm install --prefix web"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
