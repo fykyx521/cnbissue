@@ -33,13 +33,15 @@
 
 在 CNB 个人设置中创建访问令牌，需要包含以下权限：
 
-| 权限 | 用途 |
-| --- | --- |
-| `repo-issue:r` / `repo-issue:rw` | 查看 / 创建、编辑 Issue |
-| `repo-pr:r` / `repo-pr:rw` | 查看 / 创建、编辑、合并 PR |
-| `user:read` | 拉取可用仓库列表 |
+| 权限 | 用途 | 缺失时 |
+| --- | --- | --- |
+| `repo-issue:r` / `repo-issue:rw` | 查看 / 创建、编辑 Issue | Issue 页面报 403 |
+| `repo-pr:r` / `repo-pr:rw` | 查看 / 创建、编辑、合并 PR | PR 页面报 403 |
+| `account-engage:r` | 列出可管理的仓库 | 退回到「手动输入 组织/仓库」 |
 
-> 令牌权限不足时接口会返回 `403 errcode 10023`，页面会直接展示该错误。
+令牌权限不足时接口返回 `403 errcode 10023`，页面会附带中文提示。
+
+> `account-engage:r` 缺失时，仓库选择器会自动切换为手动输入模式并记住上次填写的仓库，不影响其余功能。
 
 ## 启动
 
@@ -113,6 +115,6 @@ issue/
 
 - CNB 的 Issue 状态筛选**不支持** `all`，前端「全部」选项通过不传 `state` 实现。
 - Issue 的 `state` 与 `state_reason` 必须成对提交，否则接口返回 `errcode 2000054`。前端已在关闭 / 重开时自动成对传递。
-// flow 2
-
-// flow 2 b
+- `GET /user/repos` 的 `role` 参数只接受 `owner`（也是默认值），传其它值返回 `errcode 3`。
+- PR 提交列表的真实结构是 `{ sha, commit: { message, author: { name, email, date } } }`，消息在嵌套的 `commit.message` 里。
+- 弹层通过 React portal 挂到 `body`。若直接渲染在带 `backdrop-filter` 的顶栏内部，`position: fixed` 会相对顶栏而非视口定位。
