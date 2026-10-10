@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { getRepos } from './api.js';
 import RepoPicker from './components/RepoPicker.jsx';
@@ -81,28 +81,41 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const saved = readSavedRepo();
-      try {
-        const list = await getRepos();
-        setRepos(list);
-        if (list.length) {
-          const match = list.find((r) => r.path === saved?.path);
-          if (match) setRepo(match);
-          else if (!saved) setRepo(list[0]);
-        }
-      } catch {
-        // 仓库列表需要 account-engage:r 权限，令牌缺少该权限时
-        // 退回手动输入 / 本地已保存的仓库（见 RepoPicker），不阻塞使用
-        if (saved) setRepo(saved);
-      } finally {
-        setLoading(false);
-        setReady(true);
+      // getRepos 内部已做降级：优先 /user/repos，失败则用上次仓库所属的组织
+      // 调 /{org}/-/repos，因此缺少 account-engage:r 时仍能列出仓库。
+      const list = await getRepos(saved?.path?.split('/')[0]);
+      setRepos(list);
+      if (saved) {
+        const match = list.find((r) => r.path === saved.path);
+        if (match) setRepo(match);
+      } else if (list.length) {
+        setRepo(list[0]);
       }
+      setLoading(false);
+      setReady(true);
     })();
   }, []);
 
   useEffect(() => {
-    if (repo?.path) localStorage.setItem(STORAGE_KEY, repo.path);
+    if (repo?.path) {
+      localStorage.setItem(STORAGE_KEY, repo.path);
+      // 仓库列表尚未加载完成时，新选的仓库可作为组织来源补拉列表
+      if (!repos.length && !loading) {
+        getRepos(repo.path.split('/')[0]).then((list) => list.length && setRepos(list));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repo]);
+
+  // 列表为空时，允许手动切换组织后重新拉取
+  const handleRepoChange = useCallback(
+    (r) => {
+      setRepo(r);
+      if (repos.length) return;
+      getRepos(r.path.split('/')[0]).then((list) => list.length && setRepos(list));
+    },
+    [repos.length]
+  );
 
   const ctx = useMemo(() => ({ repo, repos }), [repo, repos]);
 
@@ -112,7 +125,7 @@ export default function App() {
 
   return (
     <RepoCtx.Provider value={ctx}>
-      <Shell repos={repos} repo={repo} loading={loading} onChange={setRepo}>
+      <Shell repos={repos} repo={repo} loading={loading} onChange={handleRepoChange}>
         <Routes>
           <Route path="/" element={<Navigate to="/issues" replace />} />
           <Route path="/issues" element={<IssueList />} />

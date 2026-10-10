@@ -21,6 +21,14 @@ function numSeg(number) {
   return n;
 }
 
+function orgSeg(org) {
+  const o = String(org || '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(o)) {
+    throw new ApiError(`组织名不合法：${o || '(空)'}`, 0, null);
+  }
+  return o;
+}
+
 export class ApiError extends Error {
   constructor(message, status, payload) {
     super(message);
@@ -89,13 +97,37 @@ export const api = {
 
 // ---------- 用户 / 仓库 ----------
 
-export const getMe = () => api.get('/user');
+/**
+ * 获取可管理的仓库列表。
+ *
+ * 1) 优先 /user/repos（需要 account-engage:r），是权威来源；
+ * 2) 令牌缺少该权限时回退到 /{org}/-/repos，只需 repo 相关权限，
+ *    因此只要记得组织名（可从上次选择的仓库推出）就仍能列出仓库。
+ * 两条路都失败时返回空数组，由前端退化为纯手动输入。
+ */
+export async function getRepos(fallbackOrg) {
+  try {
+    // role 只接受 owner（也是默认值），传其它值会返回 errcode 3
+    const list = await api.get('/user/repos', { page: 1, page_size: 100 });
+    if (Array.isArray(list) && list.length) return list;
+  } catch {
+    // 缺少 account-engage:r，走下面的回退
+  }
 
-export async function getRepos() {
-  // role 只接受 owner（也是默认值），传其它值会返回 errcode 3
-  const list = await api.get('/user/repos', { page: 1, page_size: 100 });
-  return Array.isArray(list) ? list : [];
+  if (!fallbackOrg) return [];
+  try {
+    const list = await api.get(`/${orgSeg(fallbackOrg)}/-/repos`, {
+      page: 1,
+      page_size: 100,
+    });
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
 }
+
+/** 组织下的仓库列表（用于搜索 / 展开某个组织） */
+export const listOrgRepos = (org, query) => api.get(`/${orgSeg(org)}/-/repos`, query);
 
 // ---------- Issue ----------
 

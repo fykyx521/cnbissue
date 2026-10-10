@@ -1,36 +1,76 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { listOrgRepos } from '../api.js';
 import { BottomSheet } from './ui.jsx';
+import { useToast } from './Toast.jsx';
 
 const REPO_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const ORG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export default function RepoPicker({ repos, loading, value, onChange }) {
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [kw, setKw] = useState('');
-  const [manual, setManual] = useState('');
-  const [manualErr, setManualErr] = useState('');
+  const [orgList, setOrgList] = useState(null); // 按组织拉到的仓库，未拉取为 null
+  const [orgBusy, setOrgBusy] = useState(false);
+  const inputRef = useRef(null);
+
+  const all = useMemo(() => {
+    const base = repos || [];
+    return orgList ? [...orgList, ...base.filter((r) => !orgList.some((o) => o.path === r.path))] : base;
+  }, [repos, orgList]);
 
   const filtered = useMemo(() => {
     const q = kw.trim().toLowerCase();
-    if (!q) return repos;
-    return repos.filter((r) => (r.path || r.name || '').toLowerCase().includes(q));
-  }, [repos, kw]);
+    if (!q) return all;
+    return all.filter((r) =>
+      [r.path, r.name, r.description].filter(Boolean).join(' ').toLowerCase().includes(q)
+    );
+  }, [all, kw]);
+
+  const typed = kw.trim();
+  const isRepoPath = REPO_RE.test(typed);
+  const isOrg = ORG_RE.test(typed);
+  const typedExists = isRepoPath && all.some((r) => r.path === typed);
+  // 已有仓库列表时，不再提示「按组织展开」——避免把仓库名误当成组织名
+  const showOrg = isOrg && !isRepoPath && all.length === 0;
 
   useEffect(() => {
     if (!open) {
       setKw('');
-      setManual('');
-      setManualErr('');
+      setOrgList(null);
     }
   }, [open]);
 
-  const submitManual = () => {
-    const v = manual.trim();
-    if (!REPO_RE.test(v)) {
-      setManualErr('请输入 组织/仓库 形式，例如 i0358/issue');
-      return;
-    }
-    onChange({ path: v, name: v.split('/')[1] });
+  const pick = (r) => {
+    onChange(r);
     setOpen(false);
+  };
+
+  const useTyped = () => {
+    if (isRepoPath) return pick({ path: typed, name: typed.split('/')[1] });
+    toast('请输入 组织/仓库，例如 i0358/issue', 'err');
+  };
+
+  // 输入组织名时，拉取该组织下的仓库用于选择
+  const loadOrg = async () => {
+    if (!isOrg || orgBusy) return;
+    setOrgBusy(true);
+    try {
+      const list = await listOrgRepos(typed, { page: 1, page_size: 100 });
+      setOrgList(Array.isArray(list) ? list : []);
+      if (!list.length) toast(`组织 ${typed} 下没有可访问的仓库`, 'err');
+    } catch (e) {
+      toast(e.message || '加载组织仓库失败', 'err');
+    } finally {
+      setOrgBusy(false);
+    }
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key !== 'Enter') return;
+    if (typedExists && filtered.length === 1) return pick(filtered[0]);
+    if (isRepoPath) return useTyped();
+    if (isOrg) return loadOrg();
   };
 
   return (
@@ -39,7 +79,7 @@ export default function RepoPicker({ repos, loading, value, onChange }) {
         <button className="repopicker-btn" onClick={() => setOpen(true)} disabled={loading}>
           <span className="rp-label">仓库</span>
           <span className="rp-name">
-            {loading ? '加载中…' : value ? value.path || value.name : '请选择仓库'}
+            {loading ? '加载中…' : value ? value.path || value.name : '选择或输入仓库'}
           </span>
           <span className="rp-caret">▼</span>
         </button>
@@ -47,66 +87,74 @@ export default function RepoPicker({ repos, loading, value, onChange }) {
 
       {open && (
         <BottomSheet title="选择仓库" onClose={() => setOpen(false)}>
-          {repos.length > 0 && (
-            <>
-              <input
-                className="searchbox"
-                style={{ width: '100%', marginBottom: 10 }}
-                placeholder="搜索仓库"
-                value={kw}
-                onChange={(e) => setKw(e.target.value)}
-                autoFocus
-              />
-              {filtered.length === 0 && <div className="center-note">没有匹配的仓库</div>}
-              {filtered.map((r) => (
-                <div
-                  key={r.id || r.path}
-                  className="listrow"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    onChange(r);
-                    setOpen(false);
-                  }}
-                >
-                  <div className="grow">
-                    <div style={{ fontWeight: 600 }}>{r.name}</div>
-                    <div className="mono">{r.path}</div>
-                  </div>
-                  {value && (value.id === r.id || value.path === r.path) && (
-                    <span className="tag badge-accent">当前</span>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
+          <input
+            ref={inputRef}
+            className="searchbox"
+            style={{ width: '100%', marginBottom: 4 }}
+            placeholder="筛选仓库，或输入 组织/仓库"
+            value={kw}
+            onChange={(e) => setKw(e.target.value)}
+            onKeyDown={onKeyDown}
+            autoFocus
+          />
+          <div className="hint" style={{ color: 'var(--fg-faint)', fontSize: 11.5, marginBottom: 10 }}>
+            回车可直接使用输入的仓库；输入组织名可展开该组织下的仓库
+          </div>
 
-          <div className="section-head" style={{ margin: '12px -16px 12px', borderRadius: 0 }}>
-            <span>{repos.length > 0 ? '手动输入' : '无法获取仓库列表，请手动输入'}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              className="searchbox"
-              placeholder="i0358/issue"
-              value={manual}
-              onChange={(e) => {
-                setManual(e.target.value);
-                setManualErr('');
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && submitManual()}
-              style={{ minWidth: 0 }}
-            />
-            <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={submitManual}>
-              使用
-            </button>
-          </div>
-          {manualErr && (
-            <div className="hint err" style={{ color: 'var(--red)', fontSize: 11.5, marginTop: 6 }}>
-              {manualErr}
+          {isRepoPath && (
+            <div className="listrow" style={{ cursor: 'pointer' }} onClick={useTyped}>
+              <div className="grow">
+                <div style={{ fontWeight: 600, color: 'var(--accent)' }}>{typed}</div>
+                <div className="mono">{typedExists ? '已在列表中' : '直接使用该仓库'}</div>
+              </div>
+              <span className="tag badge-accent">使用</span>
             </div>
           )}
-          {repos.length === 0 && (
-            <div className="hint" style={{ color: 'var(--fg-faint)', fontSize: 11.5, marginTop: 8 }}>
-              令牌缺少 account-engage:r 权限时无法列出仓库，可直接输入「组织/仓库」。
+
+          <div className="section-head" style={{ margin: '10px -16px 0', borderRadius: 0 }}>
+            <span>{all.length ? `仓库 ${filtered.length}/${all.length}` : '仓库列表'}</span>
+          </div>
+
+          {!all.length && (
+            <div className="center-note" style={{ padding: '18px 0' }}>
+              暂无仓库列表，可直接在上方输入 组织/仓库
+            </div>
+          )}
+          {all.length > 0 && filtered.length === 0 && (
+            <div className="center-note" style={{ padding: '18px 0' }}>
+              没有匹配「{typed}」的仓库
+            </div>
+          )}
+
+          {filtered.map((r) => (
+            <div
+              key={r.id || r.path}
+              className="listrow"
+              style={{ cursor: 'pointer' }}
+              onClick={() => pick(r)}
+            >
+              <div className="grow">
+                <div style={{ fontWeight: 600 }}>{r.name}</div>
+                <div className="mono">{r.path}</div>
+              </div>
+              {value && value.path === r.path && <span className="tag badge-accent">当前</span>}
+            </div>
+          ))}
+
+          {/* 列表为空时「按组织展开」是唯一出路，放在顶部；已有列表时沉到末尾，避免干扰筛选 */}
+          {showOrg && (
+            <div
+              className="listrow"
+              style={{ cursor: orgBusy ? 'default' : 'pointer', opacity: orgBusy ? 0.6 : 1 }}
+              onClick={loadOrg}
+            >
+              <div className="grow">
+                <div style={{ fontWeight: 600, color: 'var(--accent)' }}>{typed}</div>
+                <div className="mono">
+                  {orgBusy ? '加载中…' : '按组织名查找其下的仓库'}
+                </div>
+              </div>
+              <span className="tag badge-accent">{orgBusy ? '…' : '展开'}</span>
             </div>
           )}
         </BottomSheet>

@@ -159,7 +159,7 @@ async function handleProxy(req, res) {
     return sendJson(res, 400, { errcode: 400, errmsg: '缺少目标路径' });
   }
 
-  // SSRF 防护：目标必须是白名单顶层路径，或 org/repo/-/... 形式
+  // SSRF 防护：目标必须是白名单顶层路径，或 org/repo/-/... 、org/-/... 形式
   const segments = target.split('/').filter(Boolean);
   const decoded = segments.map((s) => {
     try {
@@ -170,7 +170,10 @@ async function handleProxy(req, res) {
   });
   const allowed =
     ALLOWED_TOP.has(decoded[0]) ||
+    // {org}/{repo}/-/{resource}...
     (decoded.length >= 3 && decoded[2] === '-') ||
+    // {org}/-/{resource}...
+    (decoded.length >= 2 && decoded[1] === '-') ||
     (decoded.length === 1 && decoded[0] !== '..' && decoded[0] !== '.');
 
   if (!allowed) {
