@@ -11,7 +11,10 @@ import {
 } from '../api.js';
 import {
   BLOCKED_REASON,
+  FILE_STATUS,
   MERGEABLE_STATE,
+  REVIEW_STATE_LABEL,
+  REVIEW_STATE_TONE,
   formatTime,
   shortRef,
   shortSha,
@@ -124,17 +127,40 @@ export default function PullDetail() {
         const list = Array.isArray(data) ? data : [];
         if (!list.length) return <Empty ico="📄" text="没有变更文件" />;
         return list.map((f, i) => (
-          <div key={f.path || i} className="listrow">
+          <div key={f.sha || f.filename || i} className="listrow">
             <div className="grow">
               <div className="mono" style={{ color: 'var(--fg-dim)' }}>
-                {f.path || f.filename || f.name}
+                {f.filename || f.path || f.name}
               </div>
               <div style={{ marginTop: 3, fontSize: 12 }}>
-                <span style={{ color: 'var(--green)' }}>+{f.additions ?? f.additions_count ?? 0}</span>
+                <span style={{ color: 'var(--green)' }}>+{f.additions ?? 0}</span>
                 {'  '}
-                <span style={{ color: 'var(--red)' }}>-{f.deletions ?? f.deletions_count ?? 0}</span>
-                {f.status ? <span className="mono" style={{ marginLeft: 8 }}>{f.status}</span> : null}
+                <span style={{ color: 'var(--red)' }}>-{f.deletions ?? 0}</span>
+                {f.status ? (
+                  <span className="mono" style={{ marginLeft: 8 }}>
+                    {FILE_STATUS[f.status] || f.status}
+                  </span>
+                ) : null}
               </div>
+              {f.patch && (
+                <pre
+                  className="mono"
+                  style={{
+                    margin: '6px 0 0',
+                    padding: 8,
+                    background: 'var(--bg)',
+                    borderRadius: 8,
+                    maxHeight: 190,
+                    overflow: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontSize: 11,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {f.patch}
+                </pre>
+              )}
             </div>
           </div>
         ));
@@ -147,17 +173,28 @@ export default function PullDetail() {
       render: (data) => {
         const list = Array.isArray(data) ? data : [];
         if (!list.length) return <Empty ico="✍️" text="没有提交" />;
-        return list.map((c) => (
-          <div key={c.id || c.sha} className="listrow">
-            <div className="grow">
-              <div style={{ fontWeight: 600 }}>{(c.message || c.title || '').split('\n')[0]}</div>
-              <div className="mono" style={{ marginTop: 3 }}>
-                {shortSha(c.sha || c.id)} · <UserTag user={c.author || c.user} /> ·{' '}
-                {formatTime(c.created_at || c.date)}
+        return list.map((c) => {
+          // 实际结构：{ sha, commit: { message, author: {name,email,date} }, author }
+          const msg = c.commit?.message || c.message || '';
+          const author = c.author || c.committer;
+          const rawAuthor = c.commit?.author;
+          const name = author
+            ? author.nickname || author.username || rawAuthor?.name
+            : rawAuthor?.name;
+          const when = c.created_at || rawAuthor?.date;
+          return (
+            <div key={c.sha || c.id} className="listrow">
+              <div className="grow">
+                <div style={{ fontWeight: 600 }}>{msg.split('\n')[0]}</div>
+                <div className="mono" style={{ marginTop: 3 }}>
+                  {shortSha(c.sha || c.id)}
+                  {name ? ` · ${name}` : ''}
+                  {when ? ` · ${formatTime(when)}` : ''}
+                </div>
               </div>
             </div>
-          </div>
-        ));
+          );
+        });
       },
     },
     {
@@ -171,22 +208,16 @@ export default function PullDetail() {
           <div key={r.id || r.created_at} className="listrow">
             <div className="grow">
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <UserTag user={r.user || r.reviewer} />
-                <span
-                  className={`tag ${
-                    r.state === 'approved'
-                      ? 'badge-open'
-                      : r.state === 'changes_requested'
-                        ? 'badge-conflict'
-                        : 'badge-neutral'
-                  }`}
-                >
-                  {r.state || r.review_state || 'pending'}
+                <UserTag user={r.author || r.user || r.reviewer} />
+                <span className={`tag ${REVIEW_STATE_TONE[r.state] || 'badge-neutral'}`}>
+                  {REVIEW_STATE_LABEL[r.state] || r.state || 'pending'}
                 </span>
               </div>
-              <div style={{ marginTop: 4, color: 'var(--fg-dim)', whiteSpace: 'pre-wrap' }}>
-                {r.body}
-              </div>
+              {r.body && (
+                <div style={{ marginTop: 4, color: 'var(--fg-dim)', whiteSpace: 'pre-wrap' }}>
+                  {r.body}
+                </div>
+              )}
               <div className="mono" style={{ marginTop: 3 }}>
                 {formatTime(r.submitted_at || r.created_at)}
               </div>

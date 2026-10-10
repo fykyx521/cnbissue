@@ -61,6 +61,30 @@ export const BLOCKED_REASON = {
   waiting_review: '等待评审通过',
 };
 
+export const FILE_STATUS = {
+  add: '新增',
+  modify: '修改',
+  delete: '删除',
+  rename: '重命名',
+  copy: '复制',
+};
+
+export const REVIEW_STATE_LABEL = {
+  approved: '已通过',
+  changes_requested: '需修改',
+  commented: '已评论',
+  dismissed: '已忽略',
+  pending: '待评审',
+};
+
+export const REVIEW_STATE_TONE = {
+  approved: 'badge-open',
+  changes_requested: 'badge-conflict',
+  commented: 'badge-accent',
+  dismissed: 'badge-neutral',
+  pending: 'badge-checking',
+};
+
 export function shortRef(ref = '') {
   return String(ref).replace(/^refs\/heads\//, '');
 }

@@ -14,6 +14,19 @@ export const useRepo = () => useContext(RepoCtx);
 
 const STORAGE_KEY = 'cnb-manager:repo';
 
+// 存的是形如 i0358/issue 的纯字符串，避免与仓库列表接口耦合
+function readSavedRepo() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const path = raw.startsWith('{') ? JSON.parse(raw).path : raw;
+    if (!path || !/^[^/]+\/[^/]+$/.test(path)) return null;
+    return { path, name: path.split('/')[1] };
+  } catch {
+    return null;
+  }
+}
+
 const TABS = [
   { key: 'issues', path: '/issues', label: 'Issues', ico: '◎' },
   { key: 'pulls', path: '/pulls', label: 'PRs', ico: '⑂' },
@@ -61,29 +74,25 @@ function Shell({ children, repos, repo, loading, onChange }) {
 
 export default function App() {
   const [repos, setRepos] = useState([]);
-  const [repo, setRepo] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [repo, setRepo] = useState(readSavedRepo);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     (async () => {
+      const saved = readSavedRepo();
       try {
         const list = await getRepos();
         setRepos(list);
         if (list.length) {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          const match = list.find((r) => r.path === saved || r.id === saved);
-          setRepo(match || list[0]);
+          const match = list.find((r) => r.path === saved?.path);
+          if (match) setRepo(match);
+          else if (!saved) setRepo(list[0]);
         }
       } catch {
-        // 拉取失败不阻塞，列表页会显示错误
+        // 仓库列表需要 account-engage:r 权限，令牌缺少该权限时
+        // 退回手动输入 / 本地已保存的仓库（见 RepoPicker），不阻塞使用
+        if (saved) setRepo(saved);
       } finally {
         setLoading(false);
         setReady(true);

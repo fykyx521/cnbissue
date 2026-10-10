@@ -113,3 +113,6 @@ issue/
 
 - CNB 的 Issue 状态筛选**不支持** `all`，前端「全部」选项通过不传 `state` 实现。
 - Issue 的 `state` 与 `state_reason` 必须成对提交，否则接口返回 `errcode 2000054`。前端已在关闭 / 重开时自动成对传递。
+// flow 2
+
+// flow 2 b
