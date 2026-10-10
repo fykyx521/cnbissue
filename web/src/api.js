@@ -41,6 +41,7 @@ export class ApiError extends Error {
 const ERR_HINT = {
   10023: '访问令牌权限不足，请在 CNB 重新签发包含该资源读写权限的令牌',
   2000054: 'state 与 state_reason 必须同时提交',
+  5: '仓库或资源不存在，或当前令牌无访问权限，可点击顶部「仓库」切换',
 };
 
 async function request(method, pathname, { query, body } = {}) {

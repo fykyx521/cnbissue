@@ -5,6 +5,7 @@ import { usePagedList, useInfiniteScroll } from '../hooks.js';
 import { ISSUE_STATES } from '../constants.js';
 import { IssueCard } from '../components/cards.jsx';
 import { Empty, Skeleton } from '../components/ui.jsx';
+import { ErrorBox } from '../components/ErrorBox.jsx';
 import { useRepo } from '../App.jsx';
 
 export default function IssueList() {
@@ -76,7 +77,7 @@ export default function IssueList() {
       </div>
 
       {refreshing && <div className="center-note">刷新中…</div>}
-      {error && <div className="error-box">{error}</div>}
+      {error && <ErrorBox error={error} onRetry={reload} />}
       {loading && <Skeleton count={5} />}
       {!loading && !error && items.length === 0 && (
         <Empty ico="🎉" text="没有符合条件的 Issue" />

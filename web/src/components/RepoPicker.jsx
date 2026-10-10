@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { listOrgRepos } from '../api.js';
 import { BottomSheet } from './ui.jsx';
 import { useToast } from './Toast.jsx';
+import { OPEN_REPO_EVENT } from './ErrorBox.jsx';
 
 const REPO_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const ORG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -13,6 +14,13 @@ export default function RepoPicker({ repos, loading, value, onChange }) {
   const [orgList, setOrgList] = useState(null); // 按组织拉到的仓库，未拉取为 null
   const [orgBusy, setOrgBusy] = useState(false);
   const inputRef = useRef(null);
+
+  // 列表页报错时可主动唤起本选择器
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_REPO_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_REPO_EVENT, onOpen);
+  }, []);
 
   const all = useMemo(() => {
     const base = repos || [];
