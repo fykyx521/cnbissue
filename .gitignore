@@ -4,6 +4,4 @@ web/dist/
 .env.local
 *.log
 .DS_Store
-
-flow4
-flow4 B
+.vercel/
