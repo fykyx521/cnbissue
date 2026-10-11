@@ -41,9 +41,26 @@
 | --- | --- | --- |
 | `repo-issue:r` / `repo-issue:rw` | 查看 / 创建、编辑 Issue | Issue 页面报 403 |
 | `repo-pr:r` / `repo-pr:rw` | 查看 / 创建、编辑、合并 PR | PR 页面报 403 |
+| `repo-code:r` / `repo-code:rw` | 只读拉取 / 推送分支、建分支 | 只能读 issue、pr，写不动代码 |
 | `account-engage:r` | 列出可管理的仓库 | 退回到「手动输入 组织/仓库」 |
 
 令牌权限不足时接口返回 `403 errcode 10023`，页面会附带中文提示。
+
+**注意区分两类令牌**：只勾了 issue / pr 权限的令牌，能评论、能开关 issue，但**不能推送代码、不能建分支**。这种令牌写代码时会看到：
+
+```
+remote: Your token does not have the repo-code:rw scope required to push to this repository.
+fatal: unable to access 'https://cnb.cool/<org>/<repo>.git/': 403
+```
+
+平台 API 也一致：
+
+```bash
+cnb git create-branch --repo <org>/<repo> --name <branch> --start-point <sha>
+# 403 errcode 10023: Missing required scopes: repo-code:rw
+```
+
+一句话：**要提 PR，令牌必须有 `repo-code:rw`**；只读代码 `repo-code:r` 就够，但推分支必须是 rw。
 
 > `account-engage:r` 缺失时，仓库选择器会自动切换为手动输入模式并记住上次填写的仓库，不影响其余功能。
 
