@@ -148,6 +148,142 @@ export const listIssueComments = (repo, number, query) =>
 export const createIssueComment = (repo, number, body) =>
   api.post(`/${repoSeg(repo)}/-/issues/${numSeg(number)}/comments`, { body });
 
+// ---------- 附件 ----------
+
+const UPLOAD = '/api/upload';
+const ASSET = '/api/asset';
+
+const IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml|heic|heif)$/i;
+
+/**
+ * Issue body 里的附件是 CNB 渲染后的 HTML/Markdown，且图片 src 为
+ * 仓库相对路径。私有仓库下直接请求会 401/404，必须改写到附件代理。
+ */
+function proxiedAsset(rawPath) {
+  if (!rawPath) return '';
+  // 已是 http(s) 绝对地址的第三方图床不接管
+  if (/^https?:\/\//i.test(rawPath)) return rawPath;
+  const p = String(rawPath).replace(/^\/+/, '');
+  if (!/^[^/]+\/[^/]+\/-\/(imgs|files)\//.test(p)) return rawPath;
+  return ASSET + '/' + p;
+}
+
+/** 把正文里的附件引用改写成代理地址，返回可直接渲染的 HTML 片段 */
+export function renderBodyHtml(body, repo) {
+  if (!body) return '';
+  let html = String(body);
+
+  // <img src='/-/imgs/...' class='cnb-md-image__upload' />
+  html = html.replace(
+    /<img\b[^>]*\bsrc=(['"])([^'"]+)\1[^>]*>/gi,
+    (m, q, src) => m.replace(src, proxiedAsset(src))
+  );
+
+  // [name](/-/files/...)
+  html = html.replace(
+    /\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (m, text, href) => `[${text}](${proxiedAsset(href)})`
+  );
+
+  // ![alt](/-/imgs/...)
+  html = html.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (m, alt, src) => `<img alt="${alt}" src="${proxiedAsset(src)}" />`
+  );
+
+  // 仓库名占位符，避免正文里手写的 cnb.cool 绝对链接在切换仓库时错位
+  return html.replace(/__REPO__/g, repoSeg(repo || ''));
+}
+
+/** 从正文里抽出附件列表，用于详情页单独渲染缩略图与下载入口 */
+export function extractAssets(body, repo) {
+  const out = [];
+  const seen = new Set();
+  const push = (kind, name, url) => {
+    const full = proxiedAsset(url);
+    if (!full || seen.has(full)) return;
+    seen.add(full);
+    out.push({ kind, name, url: full });
+  };
+
+  const src = String(body || '');
+  for (const m of src.matchAll(/<img\b[^>]*\bsrc=(['"])([^'"]+)\1[^>]*>/gi)) {
+    push('image', m[2].split('/').pop(), m[2]);
+  }
+  for (const m of src.matchAll(/!\[([^\]]*)\]\(([^)\s]+)\)/g)) {
+    push('image', m[2].split('/').pop(), m[2]);
+  }
+  for (const m of src.matchAll(/\[([^\]]*)\]\((\/-\/(?:files|imgs)\/[^)\s]+)\)/g)) {
+    push('file', m[1] || m[2].split('/').pop(), m[2]);
+  }
+  return out;
+}
+
+/**
+ * 上传附件到 Issue。
+ *
+ * 流程（对应 CNB asset-groups 接口）：
+ *   1) 一次带上全部文件名/大小/类型，换取 asset_group_id 与各 upload_url；
+ *   2) 对每个 upload_url 发 PUT，body 必须是文件原始字节，不能用 FormData；
+ *   3) 把返回的 asset_link 原样拼进 Issue 正文。
+ *
+ * PUT 走 /api/upload 中转：asset.cnb.cool 的 CORS 只放行 cnb.cool 来源，
+ * 部署在其它域名时浏览器无法直连。
+ */
+export async function uploadIssueAssets(repo, files) {
+  const list = Array.from(files || []);
+  if (!list.length) return [];
+
+  const meta = list.map((f) => ({
+    name: f.name,
+    size: f.size,
+    content_type: f.type || 'application/octet-stream',
+  }));
+
+  const group = await api.post(`/${repoSeg(repo)}/-/issues/asset-groups`, {
+    image_assets: meta.filter((m) => IMAGE_TYPES.test(m.content_type)),
+    file_assets: meta.filter((m) => !IMAGE_TYPES.test(m.content_type)),
+  });
+
+  const pairs = [
+    ...(group.image_upload_urls || []).map((u, i) => [u, meta.filter((m) => IMAGE_TYPES.test(m.content_type))[i]]),
+    ...(group.file_upload_urls || []).map((u, i) => [u, meta.filter((m) => !IMAGE_TYPES.test(m.content_type))[i]]),
+  ];
+
+  const results = [];
+  for (const [url, m] of pairs) {
+    const file = list.find((f) => f.name === m.name && f.size === m.size);
+    if (!file) continue;
+    const res = await fetch(
+      UPLOAD + '?url=' + encodeURIComponent(url.upload_url),
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      }
+    );
+    if (!res.ok) {
+      throw new ApiError(`上传失败：${file.name} (${res.status})`, res.status, null);
+    }
+    results.push({
+      name: url.name,
+      asset_link: url.asset_link,
+      download_url: url.download_url,
+      path: url.path,
+      file,
+    });
+  }
+  return results;
+}
+
+/** 把上传结果转成可插入 Issue 正文的 Markdown/HTML 片段 */
+export function assetsToMarkdown(assets) {
+  return assets
+    .map((a) => a.asset_link)
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 // ---------- Pull Request ----------
 
 export const listPulls = (repo, query) => api.get(`/${repoSeg(repo)}/-/pulls`, query);

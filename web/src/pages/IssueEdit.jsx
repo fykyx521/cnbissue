@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createIssue, getIssue, patchIssue } from '../api.js';
 import { PRIORITIES } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
+import AssetPicker from '../components/AssetPicker.jsx';
 import { useRepo } from '../App.jsx';
 
 export default function IssueEdit() {
@@ -99,6 +100,9 @@ export default function IssueEdit() {
             onChange={(e) => setBody(e.target.value)}
             placeholder="补充复现步骤、期望结果等"
           />
+          <div style={{ marginTop: 8 }}>
+            <AssetPicker value={body} onChange={setBody} disabled={saving} />
+          </div>
         </div>
 
         <div className="field">

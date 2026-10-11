@@ -22,6 +22,7 @@ import {
 import { Dialog, Empty } from '../components/ui.jsx';
 import LazyTabs from '../components/LazyTabs.jsx';
 import MergeSheet from '../components/MergeSheet.jsx';
+import AssetList from '../components/AssetList.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { UserTag } from '../components/cards.jsx';
 import { useRepo } from '../App.jsx';
@@ -302,6 +303,7 @@ export default function PullDetail() {
         </div>
 
         <div className="md-body">{pull.body || ''}</div>
+        <AssetList body={pull.body} />
 
         <div className="section-head">
           <span>元信息</span>

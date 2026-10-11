@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   createIssueComment,
+  extractAssets,
   getIssue,
   getIssueLabels,
   listIssueComments,
@@ -12,6 +13,8 @@ import { CLOSE_REASONS, PRIORITIES, PRIORITY_TONE, STATE_REASON_LABEL, formatTim
 import { Dialog } from '../components/ui.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { StateBadge, UserTag } from '../components/cards.jsx';
+import AssetPicker from '../components/AssetPicker.jsx';
+import AssetList from '../components/AssetList.jsx';
 import { useRepo } from '../App.jsx';
 
 export default function IssueDetail() {
@@ -175,6 +178,7 @@ export default function IssueDetail() {
           <span className="mono">更新于 {formatTime(issue.updated_at)}</span>
         </div>
         <div className="md-body">{issue.body || ''}</div>
+        <AssetList body={issue.body} />
         <div className="section-head">
           <span>元信息</span>
         </div>
@@ -254,6 +258,7 @@ export default function IssueDetail() {
                 <span className="mono">{formatTime(c.created_at)}</span>
               </div>
               <div style={{ whiteSpace: 'pre-wrap', color: 'var(--fg-dim)' }}>{c.body}</div>
+              <AssetList body={c.body} />
             </div>
           </div>
         ))}
@@ -265,6 +270,9 @@ export default function IssueDetail() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
+          <div style={{ marginTop: 8 }}>
+            <AssetPicker value={draft} onChange={setDraft} disabled={sending} compact />
+          </div>
           <button
             className="btn btn-primary btn-block"
             style={{ marginTop: 10 }}
