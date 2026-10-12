@@ -23,7 +23,7 @@ import {
 import { Dialog, Empty } from '../components/ui.jsx';
 import LazyTabs from '../components/LazyTabs.jsx';
 import MergeSheet from '../components/MergeSheet.jsx';
-import AssetList from '../components/AssetList.jsx';
+import MarkdownBody from '../components/MarkdownBody.jsx';
 import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { UserTag } from '../components/cards.jsx';
@@ -308,8 +308,7 @@ export default function PullDetail() {
           <span>{shortRef(pull.base?.ref)}</span>
         </div>
 
-        <div className="md-body">{pull.body || ''}</div>
-        <AssetList body={pull.body} />
+        <MarkdownBody body={pull.body} />
 
         <div className="section-head">
           <span>元信息</span>

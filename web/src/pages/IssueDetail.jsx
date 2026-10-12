@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   createIssueComment,
-  extractAssets,
   getIssue,
   getIssueLabels,
   listIssueComments,
@@ -16,7 +15,7 @@ import { useToast } from '../components/Toast.jsx';
 import { StateBadge, UserTag } from '../components/cards.jsx';
 import AssetPicker from '../components/AssetPicker.jsx';
 import WorkModeToggle from '../components/WorkModeToggle.jsx';
-import AssetList from '../components/AssetList.jsx';
+import MarkdownBody from '../components/MarkdownBody.jsx';
 import { useRepo } from '../App.jsx';
 
 export default function IssueDetail() {
@@ -183,8 +182,7 @@ export default function IssueDetail() {
           )}
           <span className="mono">更新于 {formatTime(issue.updated_at)}</span>
         </div>
-        <div className="md-body">{issue.body || ''}</div>
-        <AssetList body={issue.body} />
+        <MarkdownBody body={issue.body} />
         <div className="section-head">
           <span>元信息</span>
         </div>
@@ -263,8 +261,7 @@ export default function IssueDetail() {
                 <UserTag user={c.author || c.user} />
                 <span className="mono">{formatTime(c.created_at)}</span>
               </div>
-              <div style={{ whiteSpace: 'pre-wrap', color: 'var(--fg-dim)' }}>{c.body}</div>
-              <AssetList body={c.body} />
+              <MarkdownBody body={c.body} className="md-comment" />
             </div>
           </div>
         ))}
