@@ -8,6 +8,7 @@ import {
   listIssueComments,
   patchIssue,
   putIssueLabels,
+  saveWorkMode,
 } from '../api.js';
 import { CLOSE_REASONS, PRIORITIES, PRIORITY_TONE, STATE_REASON_LABEL, formatTime } from '../constants.js';
 import { Dialog } from '../components/ui.jsx';
@@ -129,6 +130,9 @@ export default function IssueDetail() {
     try {
       await createIssueComment(repoPath, number, body, workMode);
       setDraft('');
+      // 工作模式只对当前这一条评论生效，避免下一条误开
+      setWorkMode(false);
+      saveWorkMode(false);
       const c = await listIssueComments(repoPath, number, {
         page: 1,
         page_size: 50,

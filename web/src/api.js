@@ -170,6 +170,25 @@ export function workModeBody(workMode) {
   return workMode ? { work_mode: true } : {};
 }
 
+// 读接口不回传该字段，前端只能自己记住上次的选择
+const WORK_MODE_KEY = 'cnb-manager:work-mode';
+
+export function readWorkMode() {
+  try {
+    return localStorage.getItem(WORK_MODE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saveWorkMode(on) {
+  try {
+    localStorage.setItem(WORK_MODE_KEY, on ? '1' : '0');
+  } catch {
+    // 隐私模式下写不进去，忽略即可
+  }
+}
+
 // ---------- 附件 ----------
 
 const UPLOAD = '/api/upload';
