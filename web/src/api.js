@@ -197,67 +197,102 @@ const ASSET = '/api/asset';
 const IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml|heic|heif)$/i;
 
 /**
- * Issue body 里的附件是 CNB 渲染后的 HTML/Markdown，且图片 src 为
- * 仓库相对路径。私有仓库下直接请求会 401/404，必须改写到附件代理。
+ * Issue/PR 正文与评论里的附件是 CNB 渲染后的 HTML/Markdown。
+ * 关键点：CNB 存进正文的路径是**仓库相对路径**，形如
+ *   /-/imgs/issues/{group}/{token}/{uuid}.png
+ * 不含 `组织/仓库/` 前缀（实测 asset-groups 返回的 asset_link / path 就是这样）。
+ * 私有仓库直接请求会 401/404，所以必须补上仓库前缀并改写到附件代理。
  */
-function proxiedAsset(rawPath) {
+export function proxiedAsset(rawPath, repo) {
   if (!rawPath) return '';
-  // 已是 http(s) 绝对地址的第三方图床不接管
+  // 已是 http(s) 绝对地址（含第三方图床）不接管
   if (/^https?:\/\//i.test(rawPath)) return rawPath;
+
   const p = String(rawPath).replace(/^\/+/, '');
-  if (!/^[^/]+\/[^/]+\/-\/(imgs|files)\//.test(p)) return rawPath;
-  return ASSET + '/' + p;
+  // 带 `组织/仓库/-/(imgs|files)/` 前缀的直通
+  if (/^[^/]+\/[^/]+\/-\/(imgs|files)\//.test(p)) return ASSET + '/' + p;
+  // 仓库相对路径：补上当前仓库前缀
+  if (/^-\/(imgs|files)\//.test(p)) {
+    const prefix = repo ? repoSeg(repo) : '';
+    if (!prefix) return rawPath; // 不知道仓库就只能原样返回
+    return ASSET + '/' + prefix + '/' + p;
+  }
+  return rawPath;
 }
 
-/** 把正文里的附件引用改写成代理地址，返回可直接渲染的 HTML 片段 */
-export function renderBodyHtml(body, repo) {
-  if (!body) return '';
-  let html = String(body);
+// 正文里的图片：Markdown ![alt](url) 或 HTML <img src="url">
+const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+const HTML_IMAGE_RE = /<img\b[^>]*?\bsrc=(['"])([^'"]+)\1[^>]*>/gi;
+// 正文里的普通 Markdown 链接 [text](url)
+const MD_LINK_RE = /\[([^\]]*)\]\(([^)\s]+)\)/g;
 
-  // <img src='/-/imgs/...' class='cnb-md-image__upload' />
-  html = html.replace(
-    /<img\b[^>]*\bsrc=(['"])([^'"]+)\1[^>]*>/gi,
-    (m, q, src) => m.replace(src, proxiedAsset(src))
-  );
+// 是否为附件路径（仓库相对 /-/imgs|x 或带前缀）
+const isAssetUrl = (u) => /(^|\/)-\/(imgs|files)\//.test(String(u));
 
-  // [name](/-/files/...)
-  html = html.replace(
-    /\[([^\]]*)\]\(([^)\s]+)\)/g,
-    (m, text, href) => `[${text}](${proxiedAsset(href)})`
-  );
-
-  // ![alt](/-/imgs/...)
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
-    (m, alt, src) => `<img alt="${alt}" src="${proxiedAsset(src)}" />`
-  );
-
-  // 仓库名占位符，避免正文里手写的 cnb.cool 绝对链接在切换仓库时错位
-  return html.replace(/__REPO__/g, repoSeg(repo || ''));
-}
-
-/** 从正文里抽出附件列表，用于详情页单独渲染缩略图与下载入口 */
-export function extractAssets(body, repo) {
-  const out = [];
-  const seen = new Set();
-  const push = (kind, name, url) => {
-    const full = proxiedAsset(url);
-    if (!full || seen.has(full)) return;
-    seen.add(full);
-    out.push({ kind, name, url: full });
-  };
-
+/**
+ * 把正文/评论切成可渲染的片段，按出现顺序返回：
+ *   { type: 'text' | 'image' | 'file', ... }
+ * 文本片段交给 React 文本节点渲染（天然转义，不引入 XSS 面）。
+ */
+export function parseBody(body, repo) {
   const src = String(body || '');
-  for (const m of src.matchAll(/<img\b[^>]*\bsrc=(['"])([^'"]+)\1[^>]*>/gi)) {
-    push('image', m[2].split('/').pop(), m[2]);
+  if (!src) return [];
+
+  // 先把 Markdown/HTML 图片标记找出来，统一成占位区间
+  const marks = [];
+  const collect = (re, build) => {
+    for (const m of src.matchAll(re)) {
+      marks.push({ start: m.index, end: m.index + m[0].length, ...build(m) });
+    }
+  };
+  collect(HTML_IMAGE_RE, (m) => ({ kind: 'image', url: m[2], alt: '' }));
+  collect(MD_IMAGE_RE, (m) => ({ kind: 'image', url: m[2], alt: m[1] }));
+
+  marks.sort((a, b) => a.start - b.start);
+
+  const out = [];
+  let cursor = 0;
+  for (const mk of marks) {
+    if (mk.start < cursor) continue; // 与上一段重叠（HTML img 已覆盖）就跳过
+    if (mk.start > cursor) {
+      pushText(out, src.slice(cursor, mk.start));
+    }
+    const url = proxiedAsset(mk.url, repo);
+    const name = (mk.alt || String(mk.url).split('/').pop() || '图片').trim();
+    out.push({ type: 'image', url, name });
+    cursor = mk.end;
   }
-  for (const m of src.matchAll(/!\[([^\]]*)\]\(([^)\s]+)\)/g)) {
-    push('image', m[2].split('/').pop(), m[2]);
+  if (cursor < src.length) pushText(out, src.slice(cursor));
+
+  // 文本片段里若还残留 [name](/-/files/...) 附件链接，拆成下载入口
+  return out.flatMap((seg) => (seg.type === 'text' ? splitFileLinks(seg.text, repo) : seg));
+}
+
+function pushText(out, text) {
+  if (!text) return;
+  // 与上一段文本合并，避免碎片化
+  const last = out[out.length - 1];
+  if (last && last.type === 'text') last.text += text;
+  else out.push({ type: 'text', text });
+}
+
+/** 把文本里的附件链接（非图片）拆成 file 片段，其余仍是文本 */
+function splitFileLinks(text, repo) {
+  const out = [];
+  let cursor = 0;
+  for (const m of text.matchAll(MD_LINK_RE)) {
+    const [, label, href] = m;
+    if (!isAssetUrl(href)) continue;
+    if (m.index > cursor) pushText(out, text.slice(cursor, m.index));
+    out.push({
+      type: 'file',
+      name: (label || String(href).split('/').pop() || '附件').trim(),
+      url: proxiedAsset(href, repo),
+    });
+    cursor = m.index + m[0].length;
   }
-  for (const m of src.matchAll(/\[([^\]]*)\]\((\/-\/(?:files|imgs)\/[^)\s]+)\)/g)) {
-    push('file', m[1] || m[2].split('/').pop(), m[2]);
-  }
-  return out;
+  if (cursor < text.length) pushText(out, text.slice(cursor));
+  return out.length ? out : [{ type: 'text', text }];
 }
 
 /**

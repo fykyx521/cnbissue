@@ -235,9 +235,13 @@ async function handleProxy(req, res) {
 // 注：CNB 的实际路径深度不固定，
 // 图片为 issues/{group}/{token}/{uuid}.png（3 段），
 // 文件为 issues/{group}/{token}/{uuid}/{name}（4 段），
-// 因此这里只约束字符集与段数下限，不写死段数。
+// 因此这里只约束结构，不写死段数。
+//
+// 文件名段放宽到「任意非斜杠字符」：CNB 保留上传时的原始文件名，
+// 实测会出现空格与中文（如「测试 报告 v1.pdf」），写死 [A-Za-z0-9._-]
+// 会让这类附件直接 403。穿越防护由下面的 normalize + 拒绝 `..` 段负责。
 const ASSET_PATH_RE =
-  /^[^/]+\/[^/]+\/-\/(imgs|files)\/(issues|pulls)\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+$/;
+  /^[^/]+\/[^/]+\/-\/(imgs|files)\/(issues|pulls)\/[^/]+(?:\/[^/]+)+$/;
 
 function safeAssetTarget(rawPath) {
   let decoded;
@@ -249,6 +253,8 @@ function safeAssetTarget(rawPath) {
   // 规范化后再匹配，挡住 ../ 之类的穿越写法
   const norm = path.posix.normalize(decoded).replace(/^\/+/, '');
   if (norm !== decoded.replace(/^\/+/, '')) return null;
+  // 逐段确认没有 . / .. 段，避免 normalize 之后的残余
+  if (norm.split('/').some((seg) => seg === '.' || seg === '..')) return null;
   return ASSET_PATH_RE.test(norm) ? norm : null;
 }
 
@@ -257,8 +263,10 @@ function safeAssetTarget(rawPath) {
  * 私有仓库直接访问会 404 或 401，必须由服务端带上令牌转发。
  */
 async function handleAsset(req, res) {
-  const rawUrl = new URL(req.url, 'http://localhost');
-  const target = safeAssetTarget(rawUrl.pathname.slice(ASSET_PREFIX.length));
+  // 取原始 url 而非 new URL(...).pathname：URL 构造器会先把 `..` 折叠掉，
+  // 那样穿过来的 `a/../b` 会被悄悄改写，穿越写法就检测不到了。
+  const rawPath = (req.url || '').split('?')[0].slice(ASSET_PREFIX.length);
+  const target = safeAssetTarget(rawPath);
 
   if (!target) {
     return sendJson(res, 403, { errcode: 403, errmsg: '禁止访问该附件路径' });
