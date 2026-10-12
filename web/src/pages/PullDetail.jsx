@@ -24,6 +24,7 @@ import LazyTabs from '../components/LazyTabs.jsx';
 import MergeSheet from '../components/MergeSheet.jsx';
 import MarkdownBody from '../components/MarkdownBody.jsx';
 import WorkModeToggle from '../components/WorkModeToggle.jsx';
+import CommentShortcuts from '../components/CommentShortcuts.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { UserTag } from '../components/cards.jsx';
 import { useRepo } from '../App.jsx';
@@ -407,6 +408,9 @@ export default function PullDetail() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
+          <div style={{ marginTop: 8 }}>
+            <CommentShortcuts value={draft} onChange={setDraft} disabled={sending} />
+          </div>
           <div style={{ marginTop: 8 }}>
             <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
           </div>

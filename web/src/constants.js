@@ -1,3 +1,6 @@
+// NPC 名字。评论里 @ 到它才会唤起 NPC 流水线
+export const NPC_NAME = 'CodeBuddy';
+
 export const PRIORITIES = [
   { value: '-2P', label: '-2P', tone: 'var(--red)' },
   { value: '-1P', label: '-1P', tone: 'var(--orange)' },
