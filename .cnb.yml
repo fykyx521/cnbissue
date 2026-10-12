@@ -1,0 +1,32 @@
+# CNB -> GitHub 镜像同步
+#
+# 每次 push 到 main（以及 PR 合并后）把提交强制推一份到 GitHub 镜像仓库。
+# 账号与 Token 放在独立仓库里通过 imports 引用，不写进业务仓库。
+
+# 目标仓库地址。换仓库时改 GITHUB_REPO 的值即可
+.github-repo: &github-repo
+  GITHUB_REPO: fykyx521/cnbissue
+
+# 凭据仓库，格式见 i0358/model-key 的 github.yml：
+#   GITHUB_USERNAME: <用户名>
+#   GITHUB_TOKEN: <Personal Access Token，需 repo 权限>
+.github-credentials: &github-credentials
+  imports:
+    - https://cnb.cool/i0358/model-key/-/blob/main/github.yml
+
+.github-mirror: &github-mirror
+  name: sync-to-github
+  <<: *github-credentials
+  env:
+    <<: *github-repo
+  stages:
+    - name: push to github
+      script: sh scripts/sync-to-github.sh
+
+main:
+  # 合并到主干后镜像
+  push:
+    - <<: *github-mirror
+  # 合并请求合并后同样镜像，覆盖 squash / rebase 这类产生新提交的合并方式
+  pull_request.merged:
+    - <<: *github-mirror
