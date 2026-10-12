@@ -6,13 +6,29 @@
 #
 # 环境变量：
 #   GITHUB_USERNAME / GITHUB_TOKEN  必填，GitHub 用户名与 Personal Access Token（需 repo 权限）
+#                                   变量缺失的常见原因是凭据仓库里的 imports 文件读不到（仓库私有、
+#                                   路径不存在、分支写错），报错里会直接点明，不再只报一句 git 鉴权失败。
 #   GITHUB_REPO                     可选，目标仓库 owner/name，默认 fykyx521/cnbissue
 #   GITHUB_BRANCH                   可选，目标分支，默认取当前分支名
 #   CNB_COMMIT                      可选，要同步的提交，构建环境自动注入
 set -eu
 
-: "${GITHUB_USERNAME:?缺少 GITHUB_USERNAME}"
-: "${GITHUB_TOKEN:?缺少 GITHUB_TOKEN}"
+# 先把凭据查干净再往下走：变量没注入时直接指出是配置问题，而不是等到 git 报鉴权失败
+if [ -z "${GITHUB_USERNAME:-}" ]; then
+  echo "conf: GITHUB_USERNAME 未注入" >&2
+  echo "conf: 检查 .cnb.yml 的 imports 是否指向了可读的凭据文件（例如" >&2
+  echo "conf:   https://cnb.cool/i0358/model-key/-/blob/main/github.yml）" >&2
+  echo "conf: 该文件需包含 GITHUB_USERNAME / GITHUB_TOKEN 两行，且仓库对构建可见" >&2
+  exit 1
+fi
+
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  echo "conf: GITHUB_TOKEN 未注入" >&2
+  echo "conf: 检查 .cnb.yml 的 imports 是否指向了可读的凭据文件（例如" >&2
+  echo "conf:   https://cnb.cool/i0358/model-key/-/blob/main/github.yml）" >&2
+  echo "conf: 该文件需包含 GITHUB_USERNAME / GITHUB_TOKEN 两行，且仓库对构建可见" >&2
+  exit 1
+fi
 
 REPO="${GITHUB_REPO:-fykyx521/cnbissue}"
 BRANCH="${GITHUB_BRANCH:-${CNB_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}}"
@@ -33,14 +49,21 @@ git config user.email "${GITHUB_USERNAME}@users.noreply.github.com"
 CRED_FILE="$HOME/.git-credentials"
 printf 'https://%s:%s@github.com\n' "$GITHUB_USERNAME" "$GITHUB_TOKEN" > "$CRED_FILE"
 chmod 600 "$CRED_FILE"
+git config --global credential.helper store
 
+# 读远端不需要凭据，但读到空可能是仓库/分支不存在，也可能是仓库私有 —— 两种情况在日志里分开提示
 REMOTE_SHA=$(git ls-remote --heads "$TARGET" "refs/heads/$BRANCH" | cut -f1)
-echo "GitHub 当前: ${REMOTE_SHA:-<空仓库>}"
+echo "GitHub 当前: ${REMOTE_SHA:-<远端无此分支，若仓库私有请确认 Token 有 repo 权限>}"
 
 if [ "$REMOTE_SHA" = "$CNB_COMMIT" ]; then
   echo "已是最新，无需同步"
   exit 0
 fi
 
-git push --force "$TARGET" "$CNB_COMMIT:refs/heads/$BRANCH"
+# 推送需要凭据，失败时单独给出结论，避免和上面的读操作混在一起
+if ! git push --force "$TARGET" "$CNB_COMMIT:refs/heads/$BRANCH"; then
+  echo "conf: 推送 GitHub 失败，常见原因是仓库里 imports 的 GITHUB_TOKEN 无效、过期或字符错误" >&2
+  echo "conf: 请核对凭据仓库中 GITHUB_TOKEN 的每一位字符，必要时重新签发 Token" >&2
+  exit 1
+fi
 echo "同步完成: $BRANCH -> $REMOTE_SHA => $CNB_COMMIT"
