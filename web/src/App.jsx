@@ -8,6 +8,7 @@ import IssueEdit from './pages/IssueEdit.jsx';
 import PullList from './pages/PullList.jsx';
 import PullDetail from './pages/PullDetail.jsx';
 import PullEdit from './pages/PullEdit.jsx';
+import RenderBoundary from './components/RenderBoundary.jsx';
 
 const RepoCtx = createContext({ repo: null });
 export const useRepo = () => useContext(RepoCtx);
@@ -126,18 +127,21 @@ export default function App() {
   return (
     <RepoCtx.Provider value={ctx}>
       <Shell repos={repos} repo={repo} loading={loading} onChange={handleRepoChange}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/issues" replace />} />
-          <Route path="/issues" element={<IssueList />} />
-          <Route path="/issues/new" element={<IssueEdit />} />
-          <Route path="/issues/:number" element={<IssueDetail />} />
-          <Route path="/issues/:number/edit" element={<IssueEdit />} />
-          <Route path="/pulls" element={<PullList />} />
-          <Route path="/pulls/new" element={<PullEdit />} />
-          <Route path="/pulls/:number" element={<PullDetail />} />
-          <Route path="/pulls/:number/edit" element={<PullEdit />} />
-          <Route path="*" element={<Navigate to="/issues" replace />} />
-        </Routes>
+        {/* 兜底：渲染期异常不再让整棵树卸载（那会表现为整页黑屏） */}
+        <RenderBoundary>
+          <Routes>
+            <Route path="/" element={<Navigate to="/issues" replace />} />
+            <Route path="/issues" element={<IssueList />} />
+            <Route path="/issues/new" element={<IssueEdit />} />
+            <Route path="/issues/:number" element={<IssueDetail />} />
+            <Route path="/issues/:number/edit" element={<IssueEdit />} />
+            <Route path="/pulls" element={<PullList />} />
+            <Route path="/pulls/new" element={<PullEdit />} />
+            <Route path="/pulls/:number" element={<PullDetail />} />
+            <Route path="/pulls/:number/edit" element={<PullEdit />} />
+            <Route path="*" element={<Navigate to="/issues" replace />} />
+          </Routes>
+        </RenderBoundary>
       </Shell>
     </RepoCtx.Provider>
   );

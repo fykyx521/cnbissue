@@ -203,19 +203,44 @@ const IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml|heic|heif)$/i;
  * 不含 `组织/仓库/` 前缀（实测 asset-groups 返回的 asset_link / path 就是这样）。
  * 私有仓库直接请求会 401/404，所以必须补上仓库前缀并改写到附件代理。
  */
+// 只有 CNB 自己的附件路径需要改写；第三方图床必须原样放行。
+// 用 host 白名单而非「像不像 CNB」，避免把别人的图也塞进我们的令牌代理。
+const CNB_ASSET_HOSTS = new Set(['cnb.cool', 'www.cnb.cool', 'api.cnb.cool', 'asset.cnb.cool']);
+
+/** 从绝对 URL 里取出附件路径（org/repo/-/imgs|files/...），非 CNB 附件返回 null */
+function assetPathFromAbsoluteUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  if (!CNB_ASSET_HOSTS.has(u.hostname.toLowerCase())) return null;
+  const p = u.pathname.replace(/^\/+/, '');
+  return /^[^/]+\/[^/]+\/-\/(imgs|files)\//.test(p) ? p : null;
+}
+
 export function proxiedAsset(rawPath, repo) {
   if (!rawPath) return '';
-  // 已是 http(s) 绝对地址（含第三方图床）不接管
-  if (/^https?:\/\//i.test(rawPath)) return rawPath;
+  const raw = String(rawPath);
 
-  const p = String(rawPath).replace(/^\/+/, '');
+  // 绝对地址：是 CNB 附件就走代理（私有仓库裸链会 400/401），
+  // 其它（第三方图床、外链）保持原样。
+  if (/^https?:\/\//i.test(raw)) {
+    const abs = assetPathFromAbsoluteUrl(raw);
+    return abs ? ASSET + '/' + abs : raw;
+  }
+
+  const p = raw.replace(/^\/+/, '');
   // 带 `组织/仓库/-/(imgs|files)/` 前缀的直通
   if (/^[^/]+\/[^/]+\/-\/(imgs|files)\//.test(p)) return ASSET + '/' + p;
   // 仓库相对路径：补上当前仓库前缀
   if (/^-\/(imgs|files)\//.test(p)) {
-    const prefix = repo ? repoSeg(repo) : '';
-    if (!prefix) return rawPath; // 不知道仓库就只能原样返回
-    return ASSET + '/' + prefix + '/' + p;
+    // proxiedAsset 在渲染期被调用，这里不能抛异常（会整棵树卸载 → 黑屏）。
+    // 拿到非字符串（比如误传了 { path } 对象）就退化为原样返回。
+    if (typeof repo !== 'string' || !REPO_RE.test(repo)) return rawPath;
+    return ASSET + '/' + repo + '/' + p;
   }
   return rawPath;
 }

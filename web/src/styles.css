@@ -645,6 +645,21 @@ select.filter-select {
   object-fit: contain;
 }
 
+/* 图片加载失败：用一行小占位条替代，避免深色主题下留一个空黑框 */
+.md-body .md-image-broken {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .md-body .md-file {
   display: flex;
   align-items: center;
