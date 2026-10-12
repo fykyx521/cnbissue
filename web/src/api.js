@@ -145,8 +145,49 @@ export const putIssueLabels = (repo, number, labels) =>
 
 export const listIssueComments = (repo, number, query) =>
   api.get(`/${repoSeg(repo)}/-/issues/${numSeg(number)}/comments`, query);
-export const createIssueComment = (repo, number, body) =>
-  api.post(`/${repoSeg(repo)}/-/issues/${numSeg(number)}/comments`, { body });
+export const createIssueComment = (repo, number, body, workMode = false) =>
+  api.post(`/${repoSeg(repo)}/-/issues/${numSeg(number)}/comments`, {
+    body,
+    ...workModeBody(workMode),
+  });
+
+// ---------- NPC 工作模式 ----------
+
+/**
+ * 「替我上班」（NPC 工作模式）在写接口上的字段名是 `work_mode`。
+ *
+ * 只有这 5 个接口接受该字段（见 CNB OpenAPI）：
+ *   POST /{repo}/-/issues                                    创建 Issue
+ *   POST /{repo}/-/issues/{number}/comments                   Issue 评论
+ *   POST /{repo}/-/pulls/{number}/comments                    PR 评论
+ *   POST /{repo}/-/pulls/{number}/reviews                     PR 评审
+ *   POST /{repo}/-/pulls/{number}/reviews/{review_id}/replies 评审回复
+ * 列表、详情等读接口不回传该字段；`@CodeBuddy` 不提也能跑，只是令牌只读（代码只读、只能评论）。
+ * 详见 https://docs.cnb.cool/zh/build/npc.html（工作模式）与
+ *     https://docs.cnb.cool/zh/build/npc-integration.html（API 触发时的 `npc.workMode`）
+ */
+export function workModeBody(workMode) {
+  return workMode ? { work_mode: true } : {};
+}
+
+// 读接口不回传该字段，前端只能自己记住上次的选择
+const WORK_MODE_KEY = 'cnb-manager:work-mode';
+
+export function readWorkMode() {
+  try {
+    return localStorage.getItem(WORK_MODE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saveWorkMode(on) {
+  try {
+    localStorage.setItem(WORK_MODE_KEY, on ? '1' : '0');
+  } catch {
+    // 隐私模式下写不进去，忽略即可
+  }
+}
 
 // ---------- 附件 ----------
 
@@ -300,8 +341,11 @@ export const listPullReviews = (repo, number, query) =>
   api.get(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/reviews`, query);
 export const listPullComments = (repo, number, query) =>
   api.get(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/comments`, query);
-export const createPullComment = (repo, number, body) =>
-  api.post(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/comments`, { body });
+export const createPullComment = (repo, number, body, workMode = false) =>
+  api.post(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/comments`, {
+    body,
+    ...workModeBody(workMode),
+  });
 
 export const putPullLabels = (repo, number, labels) =>
   api.put(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/labels`, { labels });

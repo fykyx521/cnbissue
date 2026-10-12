@@ -8,12 +8,14 @@ import {
   listIssueComments,
   patchIssue,
   putIssueLabels,
+  saveWorkMode,
 } from '../api.js';
 import { CLOSE_REASONS, PRIORITIES, PRIORITY_TONE, STATE_REASON_LABEL, formatTime } from '../constants.js';
 import { Dialog } from '../components/ui.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { StateBadge, UserTag } from '../components/cards.jsx';
 import AssetPicker from '../components/AssetPicker.jsx';
+import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import AssetList from '../components/AssetList.jsx';
 import { useRepo } from '../App.jsx';
 
@@ -36,6 +38,7 @@ export default function IssueDetail() {
   const [labelInput, setLabelInput] = useState('');
   const [labels, setLabels] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [workMode, setWorkMode] = useState(false);
 
   const load = useCallback(async () => {
     if (!repoPath) return;
@@ -125,8 +128,11 @@ export default function IssueDetail() {
     if (!body) return;
     setSending(true);
     try {
-      await createIssueComment(repoPath, number, body);
+      await createIssueComment(repoPath, number, body, workMode);
       setDraft('');
+      // 工作模式只对当前这一条评论生效，避免下一条误开
+      setWorkMode(false);
+      saveWorkMode(false);
       const c = await listIssueComments(repoPath, number, {
         page: 1,
         page_size: 50,
@@ -272,6 +278,9 @@ export default function IssueDetail() {
           />
           <div style={{ marginTop: 8 }}>
             <AssetPicker value={draft} onChange={setDraft} disabled={sending} compact />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
           </div>
           <button
             className="btn btn-primary btn-block"

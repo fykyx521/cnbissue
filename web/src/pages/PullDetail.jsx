@@ -8,6 +8,7 @@ import {
   listPullFiles,
   listPullReviews,
   patchPull,
+  saveWorkMode,
 } from '../api.js';
 import {
   BLOCKED_REASON,
@@ -23,6 +24,7 @@ import { Dialog, Empty } from '../components/ui.jsx';
 import LazyTabs from '../components/LazyTabs.jsx';
 import MergeSheet from '../components/MergeSheet.jsx';
 import AssetList from '../components/AssetList.jsx';
+import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { UserTag } from '../components/cards.jsx';
 import { useRepo } from '../App.jsx';
@@ -43,6 +45,7 @@ export default function PullDetail() {
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [comments, setComments] = useState([]);
+  const [workMode, setWorkMode] = useState(false);
 
   const load = useCallback(async () => {
     if (!repoPath) return;
@@ -107,8 +110,11 @@ export default function PullDetail() {
     if (!body) return;
     setSending(true);
     try {
-      await createPullComment(repoPath, number, body);
+      await createPullComment(repoPath, number, body, workMode);
       setDraft('');
+      // 工作模式只对当前这一条评论生效，避免下一条误开
+      setWorkMode(false);
+      saveWorkMode(false);
       const c = await listPullComments(repoPath, number, { page: 1, page_size: 50 });
       setComments(Array.isArray(c) ? c : []);
       toast('评论已发布', 'ok');
@@ -405,6 +411,9 @@ export default function PullDetail() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
+          <div style={{ marginTop: 8 }}>
+            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
+          </div>
           <button
             className="btn btn-primary btn-block"
             style={{ marginTop: 10 }}
