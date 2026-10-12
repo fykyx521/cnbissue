@@ -15,6 +15,7 @@ import { useToast } from '../components/Toast.jsx';
 import { StateBadge, UserTag } from '../components/cards.jsx';
 import AssetPicker from '../components/AssetPicker.jsx';
 import WorkModeToggle from '../components/WorkModeToggle.jsx';
+import CommentShortcuts from '../components/CommentShortcuts.jsx';
 import MarkdownBody from '../components/MarkdownBody.jsx';
 import { useRepo } from '../App.jsx';
 
@@ -273,6 +274,9 @@ export default function IssueDetail() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
+          <div style={{ marginTop: 8 }}>
+            <CommentShortcuts value={draft} onChange={setDraft} disabled={sending} />
+          </div>
           <div style={{ marginTop: 8 }}>
             <AssetPicker value={draft} onChange={setDraft} disabled={sending} compact />
           </div>

@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/asset-url.test.mjs"
+    "test": "node test/asset-url.test.mjs && node test/comment-shortcuts.test.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

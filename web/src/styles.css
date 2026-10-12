@@ -994,3 +994,15 @@ select.filter-select {
   color: var(--fg-faint);
   font-size: 13px;
 }
+/* 评论框上方的快捷用语 chip：比筛选 chip 矮一点，避免抢视觉重心 */
+.chip.short {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
+.chip.short:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

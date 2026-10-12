@@ -1,2 +1,4 @@
 # 测试时临时抽出的解析核心
 .parsecore.mjs
+# 测试时临时抽出的纯逻辑模块
+.shortcuts.mjs
