@@ -55,6 +55,65 @@
 - API 触发 NPC：<https://docs.cnb.cool/zh/build/npc-integration.html>
 - `CNB_TOKEN` 权限分配：<https://docs.cnb.cool/zh/build/build-in-env.html>
 
+## 同步到 GitHub
+
+CNB 仓库的提交会镜像一份到 GitHub，**强制推送**，以 CNB 为准。
+
+### 流水线
+
+`.cnb.yml` 挂在 `main` 的 `push` 与 `pull_request.merged` 上，覆盖「直接推主干」和
+「PR 合并后（squash / rebase 会造新提交）」两种情况：
+
+```yaml
+main:
+  push:
+    - <<: *github-mirror
+  pull_request.merged:
+    - <<: *github-mirror
+```
+
+目标仓库地址写在 `.github-repo` 锚点的 `GITHUB_REPO` 里，换仓库只改这一行。
+
+### 凭据
+
+账号密码不写进本仓库，通过 `imports` 从独立仓库引用（写法同 `i0358/model-key`）：
+
+```yaml
+imports:
+  - https://cnb.cool/i0358/model-key/-/blob/main/github.yml
+```
+
+那个文件里只要两行：
+
+```yaml
+GITHUB_USERNAME: <用户名>
+GITHUB_TOKEN: <Personal Access Token，需 repo 权限>
+```
+
+> `github.yml` 是公开仓库里的明文凭据，任何人可见。要换 Token 或担心泄露，
+> 把这两个变量挪到私有密钥仓库再改 `imports` 地址。
+
+### 逻辑
+
+`scripts/sync-to-github.sh` 只做一件事，不依赖任何插件镜像：
+
+1. `git ls-remote` 读 GitHub 上目标分支的 sha
+2. 与 `CNB_COMMIT` 相同就直接退出（重复触发不产生空推送）
+3. 不同则 `git push --force <sha>:refs/heads/<分支>`
+
+用 Token 换来的凭据只落在构建机的 `~/.git-credentials`，写完即用，不落仓库配置。
+
+本地手动跑：
+
+```bash
+GITHUB_USERNAME=fykyx521 \
+GITHUB_TOKEN=<token> \
+GITHUB_REPO=fykyx521/cnbissue \
+sh scripts/sync-to-github.sh
+```
+
+可用 `GITHUB_BRANCH` 覆盖目标分支，默认取当前分支名。
+
 ## 环境要求
 
 - Node.js >= 18
@@ -144,6 +203,9 @@ curl "http://localhost:3000/api/proxy/{org}/{repo}/-/issues?page=1&page_size=20&
 
 ```
 issue/
+├── .cnb.yml           # 流水线：push 时镜像同步到 GitHub
+├── scripts/
+│   └── sync-to-github.sh
 ├── server.js          # 零依赖代理 + 静态托管
 ├── package.json
 ├── .env.example
