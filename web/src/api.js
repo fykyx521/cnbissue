@@ -173,11 +173,15 @@ export function workModeBody(workMode) {
 // 读接口不回传该字段，前端只能自己记住上次的选择
 const WORK_MODE_KEY = 'cnb-manager:work-mode';
 
+/**
+ * 默认开启（用户要求「替我上班也默认选中」）。
+ * 只有用户手动关过（存了 '0'）才是不选，没存过一律按选中处理。
+ */
 export function readWorkMode() {
   try {
-    return localStorage.getItem(WORK_MODE_KEY) === '1';
+    return localStorage.getItem(WORK_MODE_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 }
 

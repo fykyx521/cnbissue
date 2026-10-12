@@ -7,7 +7,6 @@ import {
   listIssueComments,
   patchIssue,
   putIssueLabels,
-  saveWorkMode,
 } from '../api.js';
 import { CLOSE_REASONS, PRIORITIES, PRIORITY_TONE, STATE_REASON_LABEL, formatTime } from '../constants.js';
 import { Dialog } from '../components/ui.jsx';
@@ -37,7 +36,8 @@ export default function IssueDetail() {
   const [labelInput, setLabelInput] = useState('');
   const [labels, setLabels] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [workMode, setWorkMode] = useState(false);
+  // 默认选中「替我上班」，挂载后由 WorkModeToggle 用本地选择覆盖
+  const [workMode, setWorkMode] = useState(true);
 
   const load = useCallback(async () => {
     if (!repoPath) return;
@@ -129,9 +129,6 @@ export default function IssueDetail() {
     try {
       await createIssueComment(repoPath, number, body, workMode);
       setDraft('');
-      // 工作模式只对当前这一条评论生效，避免下一条误开
-      setWorkMode(false);
-      saveWorkMode(false);
       const c = await listIssueComments(repoPath, number, {
         page: 1,
         page_size: 50,
