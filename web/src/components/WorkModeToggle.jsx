@@ -6,9 +6,9 @@ import { readWorkMode, saveWorkMode } from '../api.js';
  *
  * 勾上后评论体变成 `{ body, work_mode: true }`，NPC 流水线才会拿到写权限
  * （可推代码、建分支、发 PR）；不勾时令牌以只读为主，只能看代码、写评论。
- * 选择记在本地，避免每条评论都要重勾。
  *
- * 开关值由父组件持有（发送评论时读取），本组件只负责把上次的选择读回来。
+ * 默认选中：没存过选择时就是勾上的，用户手动改过则一直沿用他的选择。
+ * 开关值由父组件持有（发送评论时读取），本组件只负责挂载时同步本地选择。
  */
 export default function WorkModeToggle({ value, onChange, disabled }) {
   useEffect(() => {
