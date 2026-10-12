@@ -8,7 +8,6 @@ import {
   listPullFiles,
   listPullReviews,
   patchPull,
-  saveWorkMode,
 } from '../api.js';
 import {
   BLOCKED_REASON,
@@ -46,7 +45,8 @@ export default function PullDetail() {
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [comments, setComments] = useState([]);
-  const [workMode, setWorkMode] = useState(false);
+  // 默认选中「替我上班」，挂载后由 WorkModeToggle 用本地选择覆盖
+  const [workMode, setWorkMode] = useState(true);
 
   const load = useCallback(async () => {
     if (!repoPath) return;
@@ -113,9 +113,6 @@ export default function PullDetail() {
     try {
       await createPullComment(repoPath, number, body, workMode);
       setDraft('');
-      // 工作模式只对当前这一条评论生效，避免下一条误开
-      setWorkMode(false);
-      saveWorkMode(false);
       const c = await listPullComments(repoPath, number, { page: 1, page_size: 50 });
       setComments(Array.isArray(c) ? c : []);
       toast('评论已发布', 'ok');
