@@ -14,6 +14,7 @@ import { Dialog } from '../components/ui.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { StateBadge, UserTag } from '../components/cards.jsx';
 import AssetPicker from '../components/AssetPicker.jsx';
+import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import AssetList from '../components/AssetList.jsx';
 import { useRepo } from '../App.jsx';
 
@@ -36,6 +37,7 @@ export default function IssueDetail() {
   const [labelInput, setLabelInput] = useState('');
   const [labels, setLabels] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [workMode, setWorkMode] = useState(false);
 
   const load = useCallback(async () => {
     if (!repoPath) return;
@@ -125,7 +127,7 @@ export default function IssueDetail() {
     if (!body) return;
     setSending(true);
     try {
-      await createIssueComment(repoPath, number, body);
+      await createIssueComment(repoPath, number, body, workMode);
       setDraft('');
       const c = await listIssueComments(repoPath, number, {
         page: 1,
@@ -272,6 +274,9 @@ export default function IssueDetail() {
           />
           <div style={{ marginTop: 8 }}>
             <AssetPicker value={draft} onChange={setDraft} disabled={sending} compact />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
           </div>
           <button
             className="btn btn-primary btn-block"

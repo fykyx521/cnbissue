@@ -13,7 +13,7 @@
 - 创建 / 编辑：标题、正文、优先级、标签、处理人
 - 关闭与重开：关闭时必须选择原因（`completed` / `not_planned`）
 - 标签管理
-- 评论列表与发表
+- 评论列表与发表，可勾选「替我上班」开启 NPC 工作模式
 
 ### Pull Request（合并为核心）
 - 列表：按状态（待合并 / 已关闭 / 全部）、目标分支筛选
@@ -28,6 +28,32 @@
   - 输入组织名可展开该组织下的全部仓库；输入 `组织/仓库` 会多出一行「直接使用」
 - **选择被记住**：选中的仓库写入 `localStorage`，下次打开自动选中；点击顶部「仓库」随时可改
   - 缓存的仓库若已失效或无权限，列表会给出中文提示并提供「切换仓库」按钮直接打开选择器
+
+## NPC 工作模式（替我上班）
+
+在 Issue / PR 评论区勾选**「替我上班」**后再发表评论，请求体会带上 `work_mode: true`：
+
+```json
+{ "body": "@CodeBuddy 帮我改掉这个 bug", "work_mode": true }
+```
+
+| 位置 | 字段名 | 取值 |
+| --- | --- | --- |
+| 评论 / Issue / 评审接口的请求体 | `work_mode` | `boolean` |
+| API 触发流水线时的 `npc` 对象 | `workMode` | `boolean`（`npc.name` 只接受 `CodeBuddy`） |
+| Issue 详情返回的 `statuses.npc[].context` | `npc.work_mode` | 字符串 `"true"` |
+
+`work_mode` 出现在 5 个写接口上：创建 Issue、Issue 评论、PR 评论、PR 评审、评审回复。
+列表与详情接口不回传该值，所以**前端无法反查某条评论当时是否开了工作模式**，
+开关只在发表时生效，选择记在 `localStorage`。
+
+开不开的区别在于令牌范围：不勾时 `CNB_TOKEN` 以只读为主（`repo-code:r`、`repo-pr:r`），
+只能读代码、写评论；勾上后才拿到 `repo-code:rw`、`repo-pr:rw`，NPC 才能推代码、建分支、发 PR。
+开启工作模式还要求触发者在仓库里是**开发者及以上**，`Reporter` / `Guest` 勾了也无效。
+
+- 工作模式：<https://docs.cnb.cool/zh/build/npc.html>
+- API 触发 NPC：<https://docs.cnb.cool/zh/build/npc-integration.html>
+- `CNB_TOKEN` 权限分配：<https://docs.cnb.cool/zh/build/build-in-env.html>
 
 ## 环境要求
 
