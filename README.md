@@ -23,6 +23,13 @@
 - **合并**：三种合并方式 **Squash（默认）** / Merge / Rebase，可填写合并提交标题与描述，可开启强制合并
 - **懒加载 Tab**：变更文件、提交、评审、讨论 —— 首次点击才发起请求，结果缓存，切换不再重复请求
 
+### 主题
+- **深色 / 浅色两套**，右上角一键切换，选择记在 `localStorage`，下次打开沿用（默认深色）
+- 只换 CSS 变量，类名不动：颜色全在 `web/src/styles.css` 的 `:root` 与 `:root[data-theme='light']` 里
+- 首屏由 `index.html` 的内联脚本定主题，刷新不会先深后浅闪一下
+- 顶栏 / 底栏是半透明 + 高斯模糊，底色也做成了变量（`--bar-bg` / `--tabbar-bg`），否则浅色下会留一条黑边
+- `<meta name="theme-color">`（浏览器地址栏、PWA 状态栏）跟着一起换
+
 ### 其他
 - **多仓库切换**：一个输入框同时支持「筛选已有仓库列表」与「直接输入 `组织/仓库`」
   - 仓库列表来源优先 `/user/repos`，令牌缺少 `account-engage:r` 时自动回退到 `/{组织}/-/repos`
@@ -247,6 +254,8 @@ issue/
 ## 注意
 
 - CNB 的 Issue 状态筛选**不支持** `all`，前端「全部」选项通过不传 `state` 实现。
+- 主题只改 CSS 变量，新增颜色**不要写死**（如 `#0b0d12`、`color: #fff`），
+  否则浅色下会漏出深色底。反色文字用 `--on-accent` / `--on-green`，`web/test/theme.test.mjs` 会盯着这条。
 - Issue 的 `state` 与 `state_reason` 必须成对提交，否则接口返回 `errcode 2000054`。前端已在关闭 / 重开时自动成对传递。
 - `GET /user/repos` 的 `role` 参数只接受 `owner`（也是默认值），传其它值返回 `errcode 3`。
 - PR 提交列表的真实结构是 `{ sha, commit: { message, author: { name, email, date } } }`，消息在嵌套的 `commit.message` 里。

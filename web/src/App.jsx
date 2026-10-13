@@ -9,6 +9,7 @@ import PullList from './pages/PullList.jsx';
 import PullDetail from './pages/PullDetail.jsx';
 import PullEdit from './pages/PullEdit.jsx';
 import RenderBoundary from './components/RenderBoundary.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 const RepoCtx = createContext({ repo: null });
 export const useRepo = () => useContext(RepoCtx);
@@ -51,6 +52,7 @@ function Shell({ children, repos, repo, loading, onChange }) {
             ⟳
           </button>
           <div className="appbar-title">CNB Issue / PR</div>
+          <ThemeToggle />
         </div>
         <RepoPicker repos={repos} loading={loading} value={repo} onChange={onChange} />
       </header>

@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #0b0d12;
   --bg-elev: #141821;
   --bg-elev2: #1c212c;
@@ -17,11 +18,55 @@
   --red-soft: rgba(248, 81, 73, 0.14);
   --orange: #d29922;
   --orange-soft: rgba(210, 153, 34, 0.16);
+  /* 跟随主题翻转的「反色」：主按钮上的字、自绘小圆圈等 */
+  --on-accent: #fff;
+  --on-green: #04150a;
+  --spin-track: rgba(255, 255, 255, 0.25);
   --radius: 14px;
   --tap: 44px;
   --tabbar-h: 58px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
+  --bar-bg: rgba(11, 13, 18, 0.88);
+  --tabbar-bg: rgba(20, 24, 33, 0.94);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --skeleton-a: #141821;
+  --skeleton-b: #1c212c;
+}
+
+/* 浅色主题：只换变量，不改类名。挂在 <html> 上，先于首屏渲染由 index.html 里的
+   内联脚本设置，避免刷新时先深后浅地闪一下。 */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f5f9;
+  --bg-elev: #ffffff;
+  --bg-elev2: #eaeef5;
+  --line: #d7dde8;
+  --line-soft: #e5eaf2;
+  --fg: #1b2029;
+  --fg-dim: #4d5666;
+  --fg-faint: #798395;
+  --accent: #2f5fe0;
+  --accent-soft: rgba(47, 95, 224, 0.1);
+  --green: #1a7f37;
+  --green-soft: rgba(26, 127, 55, 0.12);
+  --purple: #8250df;
+  --purple-soft: rgba(130, 80, 223, 0.12);
+  --red: #cf222e;
+  --red-soft: rgba(207, 34, 46, 0.1);
+  --orange: #9a6700;
+  --orange-soft: rgba(154, 103, 0, 0.12);
+  --on-accent: #ffffff;
+  --on-green: #ffffff;
+  --spin-track: rgba(0, 0, 0, 0.15);
+  /* 顶栏/底栏是半透明 + 高斯模糊，浮在内容之上，所以要跟着主题换底色 */
+  --bar-bg: rgba(243, 245, 249, 0.86);
+  --tabbar-bg: rgba(255, 255, 255, 0.92);
+  --overlay: rgba(24, 28, 36, 0.42);
+  --shadow: 0 8px 24px rgba(24, 32, 46, 0.16);
+  --skeleton-a: #e7ebf2;
+  --skeleton-b: #f6f8fb;
 }
 
 * {
@@ -29,7 +74,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html,
+html {
+  background: var(--bg);
+  /* 让 iOS 状态栏区域、浏览器 UI 也跟着主题走 */
+  scrollbar-color: var(--line) transparent;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -80,7 +130,7 @@ a {
   top: 0;
   z-index: 40;
   padding-top: var(--safe-t);
-  background: rgba(11, 13, 18, 0.88);
+  background: var(--bar-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line-soft);
@@ -172,7 +222,7 @@ a {
   position: relative;
   z-index: 40;
   display: flex;
-  background: rgba(20, 24, 33, 0.94);
+  background: var(--tabbar-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
@@ -214,7 +264,7 @@ a {
   padding: 0 4px;
   border-radius: 8px;
   background: var(--green);
-  color: #04150a;
+  color: var(--on-green);
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -460,13 +510,13 @@ select.filter-select {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-success {
   background: var(--green);
   border-color: var(--green);
-  color: #04150a;
+  color: var(--on-green);
 }
 
 .btn-danger {
@@ -784,7 +834,7 @@ select.filter-select {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   backdrop-filter: blur(3px);
   display: flex;
   align-items: flex-end;
@@ -918,7 +968,7 @@ select.filter-select {
   height: 84px;
   margin: 0 12px 10px;
   border-radius: var(--radius);
-  background: linear-gradient(90deg, var(--bg-elev) 25%, var(--bg-elev2) 50%, var(--bg-elev) 75%);
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.3s infinite;
 }
@@ -933,7 +983,7 @@ select.filter-select {
   display: inline-block;
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid var(--spin-track);
   border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -969,7 +1019,7 @@ select.filter-select {
   border: 1px solid var(--line);
   color: var(--fg);
   font-size: 13.5px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow);
   animation: pop 0.16s ease;
   word-break: break-word;
 }
