@@ -1,5 +1,13 @@
 import { Link } from 'react-router-dom';
-import { PRIORITY_TONE, formatTime, shortRef, MERGEABLE_STATE } from '../constants.js';
+import {
+  PRIORITY_TONE,
+  formatTime,
+  shortRef,
+  shortSha,
+  MERGEABLE_STATE,
+  buildStatusOf,
+  formatDuration,
+} from '../constants.js';
 
 export function UserTag({ user, suffix }) {
   if (!user) return null;
@@ -109,6 +117,64 @@ export function PullCard({ pull }) {
           <>
             <span className="sep">·</span>
             <span>👀 {pull.review_count}</span>
+          </>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+/** 构建状态徽章，列表与详情共用 */
+export function BuildBadge({ status }) {
+  const s = buildStatusOf(status);
+  return (
+    <span className={`tag ${s.tone} dot`}>
+      {s.ico} {s.label}
+    </span>
+  );
+}
+
+export function BuildCard({ build }) {
+  // 上游把「流水线成功/失败/总数」拆成三个字段，这里拼成 3/3 这种进度
+  const total = build.pipelineTotalCount || 0;
+  const ok = build.pipelineSuccessCount || 0;
+  const fail = build.pipelineFailCount || 0;
+  const shown = build.title || build.commitTitle || build.sn;
+
+  return (
+    <Link className="card" to={`/builds/${build.sn}`}>
+      <div className="card-head">
+        <div className="card-title">{shown}</div>
+        <BuildBadge status={build.status} />
+      </div>
+      <div className="card-meta">
+        <span className="mono">{shortSha(build.sha)}</span>
+        {build.sourceRef && (
+          <>
+            <span className="sep">·</span>
+            <span className="mono">{shortRef(build.sourceRef)}</span>
+          </>
+        )}
+        <span className="sep">·</span>
+        <span className="mono">{formatDuration(build.duration)}</span>
+        {total > 0 && (
+          <>
+            <span className="sep">·</span>
+            <span>
+              {fail > 0 ? `✕ ${fail} ` : ''}
+              {ok}/{total}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="card-meta">
+        <UserTag user={{ nickname: build.nickName || build.userName }} />
+        <span className="sep">·</span>
+        <span>{formatTime(build.createTime)}</span>
+        {build.event && (
+          <>
+            <span className="sep">·</span>
+            <span className="mono">{build.event}</span>
           </>
         )}
       </div>

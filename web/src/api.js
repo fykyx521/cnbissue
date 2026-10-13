@@ -416,3 +416,29 @@ export const putPullLabels = (repo, number, labels) =>
 
 export const mergePull = (repo, number, body) =>
   api.put(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}/merge`, body);
+
+// ---------- 流水线构建 ----------
+
+/**
+ * 构建号（sn）形如 `cnb-l8u-1k4qh1n0b`，字符集与仓库名同一套，直接复用校验。
+ * 单列出来是为了让调用点读起来知道这里要的是构建号，不是数字编号。
+ */
+const snSeg = numSeg;
+
+/** 流水线构建列表，支持状态 / 分支 / 事件 / 时间区间筛选，分页 */
+export const listBuilds = (repo, query) => api.get(`/${repoSeg(repo)}/-/build/logs`, query);
+
+/** 单个构建的实时状态：含每条流水线、各 stage 的状态与耗时 */
+export const getBuildStatus = (repo, sn) =>
+  api.get(`/${repoSeg(repo)}/-/build/status/${snSeg(sn)}`);
+
+/**
+ * 触发一次构建。
+ * CNB 要求 `event` 必须是 `api_trigger` 或其前缀，故这里默认带上，
+ * 不传会被上游拒掉（400）。
+ */
+export const startBuild = (repo, body) =>
+  api.post(`/${repoSeg(repo)}/-/build/start`, { event: 'api_trigger', ...body });
+
+/** 停止一个进行中的构建 */
+export const stopBuild = (repo, sn) => api.post(`/${repoSeg(repo)}/-/build/stop/${snSeg(sn)}`);

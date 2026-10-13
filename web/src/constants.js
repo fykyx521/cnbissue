@@ -114,3 +114,58 @@ export function repoPathOf(repo) {
 export function shortSha(sha = '') {
   return String(sha).slice(0, 7);
 }
+// ---------- 流水线构建 ----------
+
+/**
+ * 构建 / stage 状态。上游取值固定为下面这几种：
+ *   pending 等待中、success 成功、error 失败、cancel 已取消，
+ *   stage 额外有 start（进行中）与 skip（跳过）。
+ * 映射表里没有的一律退化成灰色 badge，不抛异常。
+ */
+export const BUILD_STATUS = {
+  pending: { label: '等待中', tone: 'badge-checking', ico: '⟳' },
+  start: { label: '进行中', tone: 'badge-accent', ico: '⟳' },
+  running: { label: '进行中', tone: 'badge-accent', ico: '⟳' },
+  success: { label: '成功', tone: 'badge-open', ico: '✓' },
+  error: { label: '失败', tone: 'badge-conflict', ico: '✕' },
+  failed: { label: '失败', tone: 'badge-conflict', ico: '✕' },
+  cancel: { label: '已取消', tone: 'badge-neutral', ico: '⊘' },
+  cancelled: { label: '已取消', tone: 'badge-neutral', ico: '⊘' },
+  skip: { label: '已跳过', tone: 'badge-neutral', ico: '→' },
+  skipped: { label: '已跳过', tone: 'badge-neutral', ico: '→' },
+};
+
+/** 构建列表的状态筛选项。空串表示不筛 */
+export const BUILD_STATES = [
+  { value: '', label: '全部' },
+  { value: 'pending', label: '等待中' },
+  { value: 'success', label: '成功' },
+  { value: 'error', label: '失败' },
+  { value: 'cancel', label: '已取消' },
+];
+
+export function buildStatusOf(status) {
+  return BUILD_STATUS[String(status || '').toLowerCase()] || {
+    label: status || '未知',
+    tone: 'badge-neutral',
+    ico: '•',
+  };
+}
+
+/** 构建是否还在跑（用于决定要不要轮询、能不能停止） */
+export function isBuildActive(status) {
+  const s = String(status || '').toLowerCase();
+  return s === 'pending' || s === 'start' || s === 'running';
+}
+
+/** 毫秒时长 → 「3.2s」「1m20s」「2h3m」这类紧凑写法 */
+export function formatDuration(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  const s = n / 1000;
+  if (s < 60) return `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m${Math.round(s % 60)}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h${m % 60}m`;
+}
