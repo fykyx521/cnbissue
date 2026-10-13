@@ -228,6 +228,17 @@ a {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  /* 底部固定 tab 栏上沿会盖住滚动末尾：
+     详情页最后是评论框，「发表评论」按钮与 .field 的 margin-bottom
+     一起被压在 tab 栏下面，看着就像内容没到底。
+     滚动容器自留一段等于 tab 栏高度加安全区的内边距，滚到底时
+     末尾元素正好落在 tab 栏之上。 */
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
+}
+
+/* 列表页尾部已有「加载更多」垫底，再叠一段内边距会多出一屏空白 */
+.content:has(> .loadmore) {
+  padding-bottom: 0;
 }
 
 /* ---------- 筛选条 ---------- */

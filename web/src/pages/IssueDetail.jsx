@@ -251,7 +251,7 @@ export default function IssueDetail() {
         <div className="section-head">
           <span>评论 {comments.length}</span>
         </div>
-        {comments.length === 0 && <div className="center-note">还没有评论</div>}
+        {comments.length === 0 && <div className="center-note">还没有评论，在下方发表</div>}
         {comments.map((c) => (
           <div key={c.id || c.created_at} className="listrow">
             <div className="grow">

@@ -20,6 +20,7 @@ import {
   shortSha,
 } from '../constants.js';
 import { Dialog, Empty } from '../components/ui.jsx';
+import AssetPicker from '../components/AssetPicker.jsx';
 import LazyTabs from '../components/LazyTabs.jsx';
 import MergeSheet from '../components/MergeSheet.jsx';
 import MarkdownBody from '../components/MarkdownBody.jsx';
@@ -237,22 +238,55 @@ export default function PullDetail() {
       loader: () => listPullComments(repoPath, number, { page: 1, page_size: 50 }),
       render: (data) => {
         const list = Array.isArray(data) ? data : [];
-        return list.length === 0 ? (
-          <Empty ico="💬" text="还没有评论" />
-        ) : (
-          list.map((c) => (
-            <div key={c.id || c.created_at} className="listrow">
-              <div className="grow">
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <UserTag user={c.author || c.user} />
-                  <span className="mono">{formatTime(c.created_at)}</span>
-                </div>
-                <div style={{ marginTop: 3, whiteSpace: 'pre-wrap', color: 'var(--fg-dim)' }}>
-                  {c.body}
+        return (
+          <>
+            {list.length === 0 && <Empty ico="💬" text="还没有评论" />}
+            {list.map((c) => (
+              <div key={c.id || c.created_at} className="listrow">
+                <div className="grow">
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <UserTag user={c.author || c.user} />
+                    <span className="mono">{formatTime(c.created_at)}</span>
+                  </div>
+                  <MarkdownBody body={c.body} className="md-comment" />
                 </div>
               </div>
+            ))}
+            <div style={{ padding: 12 }}>
+              <textarea
+                className="field"
+                style={{
+                  width: '100%',
+                  minHeight: 80,
+                  background: 'var(--bg)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 11,
+                  padding: 11,
+                  outline: 'none',
+                }}
+                placeholder="写下你的评论…"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+              <div style={{ marginTop: 8 }}>
+                <CommentShortcuts value={draft} onChange={setDraft} disabled={sending} />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <AssetPicker value={draft} onChange={setDraft} disabled={sending} compact />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
+              </div>
+              <button
+                className="btn btn-primary btn-block"
+                style={{ marginTop: 10 }}
+                onClick={doComment}
+                disabled={sending || !draft.trim()}
+              >
+                {sending ? '发布中…' : '发表评论'}
+              </button>
             </div>
-          ))
+          </>
         );
       },
     },
@@ -387,42 +421,6 @@ export default function PullDetail() {
 
       <div style={{ marginTop: 12 }}>
         <LazyTabs items={tabs} />
-      </div>
-
-      <div className="detail-section" style={{ marginTop: 12 }}>
-        <div className="section-head">
-          <span>发表评论</span>
-        </div>
-        <div style={{ padding: 12 }}>
-          <textarea
-            style={{
-              width: '100%',
-              minHeight: 80,
-              background: 'var(--bg)',
-              border: '1px solid var(--line)',
-              borderRadius: 11,
-              padding: 11,
-              outline: 'none',
-            }}
-            placeholder="写下你的评论…"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <div style={{ marginTop: 8 }}>
-            <CommentShortcuts value={draft} onChange={setDraft} disabled={sending} />
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={sending} />
-          </div>
-          <button
-            className="btn btn-primary btn-block"
-            style={{ marginTop: 10 }}
-            onClick={doComment}
-            disabled={sending || !draft.trim()}
-          >
-            {sending ? '发布中…' : '发表评论'}
-          </button>
-        </div>
       </div>
 
       {mergeOpen && (

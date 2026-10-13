@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPull, getPull, patchPull } from '../api.js';
+import AssetPicker from '../components/AssetPicker.jsx';
+import CommentShortcuts from '../components/CommentShortcuts.jsx';
+import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { useRepo } from '../App.jsx';
 
@@ -20,6 +23,8 @@ export default function PullEdit() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  // 描述同样是「写给 CodeBuddy 的活」，所以编辑页也带召唤与工作模式
+  const [workMode, setWorkMode] = useState(true);
 
   useEffect(() => {
     if (!isEdit || !repoPath) return;
@@ -126,6 +131,15 @@ export default function PullEdit() {
             onChange={(e) => setBody(e.target.value)}
             placeholder="变更说明、关联 Issue 等"
           />
+          <div style={{ marginTop: 8 }}>
+            <CommentShortcuts value={body} onChange={setBody} disabled={saving} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <AssetPicker value={body} onChange={setBody} disabled={saving} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={saving} />
+          </div>
         </div>
 
         {err && <div className="error-box">{err}</div>}

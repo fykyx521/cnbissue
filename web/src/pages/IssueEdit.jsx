@@ -4,6 +4,8 @@ import { createIssue, getIssue, patchIssue } from '../api.js';
 import { PRIORITIES } from '../constants.js';
 import { useToast } from '../components/Toast.jsx';
 import AssetPicker from '../components/AssetPicker.jsx';
+import CommentShortcuts from '../components/CommentShortcuts.jsx';
+import WorkModeToggle from '../components/WorkModeToggle.jsx';
 import { useRepo } from '../App.jsx';
 
 export default function IssueEdit() {
@@ -22,6 +24,8 @@ export default function IssueEdit() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  // 描述同样是「写给 CodeBuddy 的活」，所以编辑页也带召唤与工作模式
+  const [workMode, setWorkMode] = useState(true);
 
   useEffect(() => {
     if (!isEdit || !repoPath) return;
@@ -101,7 +105,13 @@ export default function IssueEdit() {
             placeholder="补充复现步骤、期望结果等"
           />
           <div style={{ marginTop: 8 }}>
+            <CommentShortcuts value={body} onChange={setBody} disabled={saving} />
+          </div>
+          <div style={{ marginTop: 8 }}>
             <AssetPicker value={body} onChange={setBody} disabled={saving} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <WorkModeToggle value={workMode} onChange={setWorkMode} disabled={saving} />
           </div>
         </div>
 

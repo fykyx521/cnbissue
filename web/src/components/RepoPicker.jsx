@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { listOrgRepos } from '../api.js';
 import { BottomSheet } from './ui.jsx';
 import { useToast } from './Toast.jsx';
@@ -9,6 +10,8 @@ const ORG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export default function RepoPicker({ repos, loading, value, onChange }) {
   const toast = useToast();
+  const nav = useNavigate();
+  const loc = useLocation();
   const [open, setOpen] = useState(false);
   const [kw, setKw] = useState('');
   const [orgList, setOrgList] = useState(null); // 按组织拉到的仓库，未拉取为 null
@@ -49,8 +52,17 @@ export default function RepoPicker({ repos, loading, value, onChange }) {
     }
   }, [open]);
 
+  // 换了仓库，旧仓库的 Issue/PR 编号就失效了。
+  // 停在详情页会拿新仓库去请求同一个编号，轻则 404 重则看错数据，
+  // 统一回列表页，由列表页按新仓库重新拉取。
+  const goListIfNeeded = () => {
+    if (!/^\/(issues|pulls)\//.test(loc.pathname)) return;
+    nav(loc.pathname.startsWith('/pulls') ? '/pulls' : '/issues', { replace: true });
+  };
+
   const pick = (r) => {
     onChange(r);
+    goListIfNeeded();
     setOpen(false);
   };
 

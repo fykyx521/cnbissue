@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { readWorkMode } from '../api.js';
 import { NPC_NAME } from '../constants.js';
 
 /**
@@ -49,6 +51,22 @@ export function activeShortcut(draft) {
   return SHORTCUTS.filter((it) => s.startsWith(it.text)).sort(
     (a, b) => b.text.length - a.text.length
   )[0]?.key;
+}
+
+/**
+ * 详情页与编辑页共用的纯逻辑：工作模式 + 当前草稿用的是哪条快捷语。
+ *
+ * 放在这里而不是拆成独立模块，是因为这两个页面都通过 CommentShortcuts
+ * 这一条路径拿到它们；编辑页没有评论接口，但仍然要能召唤 NPC 并带上工作模式。
+ */
+export function useCommentExtras(draft, initialWorkMode = true) {
+  const [workMode, setWorkMode] = useState(initialWorkMode);
+  // 本地记录过选择就以本地为准
+  useEffect(() => {
+    if (readWorkMode()) setWorkMode(true);
+  }, []);
+  const shortcut = activeShortcut(draft);
+  return { workMode, setWorkMode, shortcut };
 }
 
 export default function CommentShortcuts({ value, onChange, disabled }) {
