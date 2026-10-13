@@ -23,6 +23,13 @@
 - **合并**：三种合并方式 **Squash（默认）** / Merge / Rebase，可填写合并提交标题与描述，可开启强制合并
 - **懒加载 Tab**：变更文件、提交、评审、讨论 —— 首次点击才发起请求，结果缓存，切换不再重复请求
 
+### 流水线构建（查看与运维）
+- **列表**：按状态（全部 / 等待中 / 成功 / 失败 / 已取消）与源分支筛选，触底自动加载
+- **详情**：构建状态、触发人、耗时、提交、触发事件、NPC 工作模式，以及每条流水线下各 Stage 的状态与耗时
+- **自动刷新**：构建仍在进行中时每 4 秒轮询一次，拿到终态自动停
+- **停止构建**：对进行中的构建可一键停止（二次确认）
+- 完整日志给出跳转链接，在 CNB 侧看更全的日志
+
 ### 主题
 - **深色 / 浅色两套**，右上角一键切换，选择记在 `localStorage`，下次打开沿用（默认深色）
 - 只换 CSS 变量，类名不动：颜色全在 `web/src/styles.css` 的 `:root` 与 `:root[data-theme='light']` 里
@@ -158,6 +165,8 @@ sh scripts/sync-to-github.sh
 | `repo-issue:r` / `repo-issue:rw` | 查看 / 创建、编辑 Issue | Issue 页面报 403 |
 | `repo-pr:r` / `repo-pr:rw` | 查看 / 创建、编辑、合并 PR | PR 页面报 403 |
 | `repo-code:r` / `repo-code:rw` | 只读拉取 / 推送分支、建分支 | 只能读 issue、pr，写不动代码 |
+| `repo-cnb-history:r` | 查看流水线构建列表与状态 | 构建页面报 403 |
+| `repo-cnb-trigger:r` / `repo-cnb-trigger:rw` | 查看 Stage 详情 / 触发、停止构建 | 详情页看不到 Stage，「停止构建」不可用 |
 | `account-engage:r` | 列出可管理的仓库 | 退回到「手动输入 组织/仓库」 |
 
 令牌权限不足时接口返回 `403 errcode 10023`，页面会附带中文提示。
@@ -223,6 +232,8 @@ ANY /api/proxy/<cnb 路径>
 ```bash
 curl http://localhost:3000/api/proxy/user/repos
 curl "http://localhost:3000/api/proxy/{org}/{repo}/-/issues?page=1&page_size=20&state=open"
+curl "http://localhost:3000/api/proxy/{org}/{repo}/-/build/logs?page=1&page_size=20"
+curl "http://localhost:3000/api/proxy/{org}/{repo}/-/build/status/{sn}"
 ```
 
 - 请求方法、query、body 原样转发
@@ -248,7 +259,7 @@ issue/
         ├── hooks.js         # 分页 / 懒加载 hooks
         ├── App.jsx          # 外壳：仓库选择器 + 底部 Tab + 路由
         ├── components/      # UI 组件、卡片、懒加载 Tab、合并弹层
-        └── pages/           # Issue 与 PR 页面
+        └── pages/           # Issue、PR 与构建页面
 ```
 
 ## 注意
@@ -258,6 +269,9 @@ issue/
   否则浅色下会漏出深色底。反色文字用 `--on-accent` / `--on-green`，`web/test/theme.test.mjs` 会盯着这条。
 - Issue 的 `state` 与 `state_reason` 必须成对提交，否则接口返回 `errcode 2000054`。前端已在关闭 / 重开时自动成对传递。
 - `GET /user/repos` 的 `role` 参数只接受 `owner`（也是默认值），传其它值返回 `errcode 3`。
+- 构建列表接口返回的是 `{ total, data }`，分页数据在 `data` 里；`total` 是字符串不是数字。
+- `POST /{repo}/-/build/start` 的 `event` 必填且必须是 `api_trigger` 或其前缀，否则 400（前端已默认带上）。
+- 构建详情的元信息（标题、分支、提交）只在列表接口里，详情页按 `sn` 精确捞一条回来补上。
 - PR 提交列表的真实结构是 `{ sha, commit: { message, author: { name, email, date } } }`，消息在嵌套的 `commit.message` 里。
 - 弹层通过 React portal 挂到 `body`。若直接渲染在带 `backdrop-filter` 的顶栏内部，`position: fixed` 会相对顶栏而非视口定位。
 - 后端代理的路径白名单同时放行 `/{组织}/{仓库}/-/{资源}` 与 `/{组织}/-/{资源}` 两种形态，其余一律 403。

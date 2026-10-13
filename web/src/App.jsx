@@ -8,6 +8,8 @@ import IssueEdit from './pages/IssueEdit.jsx';
 import PullList from './pages/PullList.jsx';
 import PullDetail from './pages/PullDetail.jsx';
 import PullEdit from './pages/PullEdit.jsx';
+import BuildList from './pages/BuildList.jsx';
+import BuildDetail from './pages/BuildDetail.jsx';
 import RenderBoundary from './components/RenderBoundary.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 
@@ -32,6 +34,7 @@ function readSavedRepo() {
 const TABS = [
   { key: 'issues', path: '/issues', label: 'Issues', ico: '◎' },
   { key: 'pulls', path: '/pulls', label: 'PRs', ico: '⑂' },
+  { key: 'builds', path: '/builds', label: '构建', ico: '🛠' },
 ];
 
 function Shell({ children, repos, repo, loading, onChange }) {
@@ -141,6 +144,8 @@ export default function App() {
             <Route path="/pulls/new" element={<PullEdit />} />
             <Route path="/pulls/:number" element={<PullDetail />} />
             <Route path="/pulls/:number/edit" element={<PullEdit />} />
+            <Route path="/builds" element={<BuildList />} />
+            <Route path="/builds/:sn" element={<BuildDetail />} />
             <Route path="*" element={<Navigate to="/issues" replace />} />
           </Routes>
         </RenderBoundary>
