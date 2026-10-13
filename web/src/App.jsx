@@ -10,6 +10,9 @@ import PullDetail from './pages/PullDetail.jsx';
 import PullEdit from './pages/PullEdit.jsx';
 import BuildList from './pages/BuildList.jsx';
 import BuildDetail from './pages/BuildDetail.jsx';
+import WorkspaceList from './pages/WorkspaceList.jsx';
+import WorkspaceDetail from './pages/WorkspaceDetail.jsx';
+import WorkspaceNew from './pages/WorkspaceNew.jsx';
 import RenderBoundary from './components/RenderBoundary.jsx';
 import ThemeToggle from './components/ThemeToggle.jsx';
 
@@ -35,6 +38,7 @@ const TABS = [
   { key: 'issues', path: '/issues', label: 'Issues', ico: '◎' },
   { key: 'pulls', path: '/pulls', label: 'PRs', ico: '⑂' },
   { key: 'builds', path: '/builds', label: '构建', ico: '🛠' },
+  { key: 'workspaces', path: '/workspaces', label: '云开发', ico: '🧰' },
 ];
 
 function Shell({ children, repos, repo, loading, onChange }) {
@@ -146,6 +150,9 @@ export default function App() {
             <Route path="/pulls/:number/edit" element={<PullEdit />} />
             <Route path="/builds" element={<BuildList />} />
             <Route path="/builds/:sn" element={<BuildDetail />} />
+            <Route path="/workspaces" element={<WorkspaceList />} />
+            <Route path="/workspaces/new" element={<WorkspaceNew />} />
+            <Route path="/workspaces/:slug/:sn" element={<WorkspaceDetail />} />
             <Route path="*" element={<Navigate to="/issues" replace />} />
           </Routes>
         </RenderBoundary>

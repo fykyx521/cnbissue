@@ -1,6 +1,6 @@
 # CNB Issue / PR 手机端管理工具
 
-基于 [CNB OpenAPI](https://api.cnb.cool/swagger.json) 的移动端优先 Web 应用，用于管理 CNB 仓库的 Issue 与 PR（合并请求）。
+基于 [CNB OpenAPI](https://api.cnb.cool/swagger.json) 的移动端优先 Web 应用，用于管理 CNB 仓库的 Issue、PR（合并请求）与云原生开发环境。
 
 - **后端**：Node.js 原生 `http`，零依赖，单文件 `server.js`。唯一接口 `/api/proxy/*` 原样转发到 `https://api.cnb.cool/*`，并注入 `CNB_TOKEN`，令牌不下发到浏览器。
 - **前端**：React 18 + Vite 5，移动端优先设计（底部导航、44px 触控热区、安全区适配、桌面端限宽居中）。
@@ -29,6 +29,29 @@
 - **自动刷新**：构建仍在进行中时每 4 秒轮询一次，拿到终态自动停
 - **停止构建**：对进行中的构建可一键停止（二次确认）
 - 完整日志给出跳转链接，在 CNB 侧看更全的日志
+
+### 云开发（云原生开发环境）
+- 列表：按状态（运行中 / 已关闭）与仓库筛选，触底分页。与 Issue / PR 不同，开发环境是**用户维度**的资源，不依赖顶部选中的仓库
+- 详情：仓库、分支、提交、创建时间、存活时长、是否支持 SSH、工作区路径；环境关闭后额外显示代码备份统计
+- 连接方式：WebIDE、CodeBuddy Web、SSH、Remote SSH、VS Code / Cursor / JetBrains / Trae / Zed 等客户端 schema 一键复制
+- 启动：针对当前选中仓库启动，分支可选（默认 `main` / `master`）；已存在环境时接口直接返回 WebIDE 地址，否则开新页签打开创建流水线
+- 停止 / 删除：均二次确认。停止只回收环境（未提交改动靠自动备份恢复），删除会连同代码备份一并清除
+
+后台对应 CNB OpenAPI 的 Workspace 接口：
+
+| 操作 | 接口 | 令牌权限 |
+| --- | --- | --- |
+| 列表 | `GET /workspace/list` | `account-engage:r` |
+| 停止 | `POST /workspace/stop` | `account-engage:rw` |
+| 删除 | `POST /workspace/delete` | `account-engage:rw` |
+| 启动 | `POST /{repo}/-/workspace/start` | `repo-cnb-trigger:rw` |
+| 连接地址 | `GET /{repo}/-/workspace/detail/{sn}` | `repo-cnb-detail:r` |
+
+`/workspace/*` 是不挂仓库的顶层接口，后端代理的白名单里已显式放行
+（`ALLOWED_TOP` 增加 `workspace`），否则会被当作非法路径 403。
+
+文档：<https://docs.cnb.cool/zh/workspaces/intro.html>
+
 
 ### 主题
 - **深色 / 浅色两套**，右上角一键切换，选择记在 `localStorage`，下次打开沿用（默认深色）
@@ -167,7 +190,11 @@ sh scripts/sync-to-github.sh
 | `repo-code:r` / `repo-code:rw` | 只读拉取 / 推送分支、建分支 | 只能读 issue、pr，写不动代码 |
 | `repo-cnb-history:r` | 查看流水线构建列表与状态 | 构建页面报 403 |
 | `repo-cnb-trigger:r` / `repo-cnb-trigger:rw` | 查看 Stage 详情 / 触发、停止构建 | 详情页看不到 Stage，「停止构建」不可用 |
-| `account-engage:r` | 列出可管理的仓库 | 退回到「手动输入 组织/仓库」 |
+| `account-engage:r` | 列出可管理的仓库、列出我的开发环境 | 退回到「手动输入 组织/仓库」；云开发列表报 403 |
+| `account-engage:rw` | 停止 / 删除开发环境 | 云开发页面的停止、删除按钮报 403 |
+| `repo-cnb-trigger:rw` | 启动云原生开发环境 | 启动按钮报 403 |
+| `repo-cnb-detail:r` | 读取开发环境的连接地址 | 详情页的 WebIDE / SSH 地址为空 |
+
 
 令牌权限不足时接口返回 `403 errcode 10023`，页面会附带中文提示。
 
@@ -257,9 +284,10 @@ issue/
         ├── api.js           # 接口封装
         ├── constants.js     # 枚举与格式化
         ├── hooks.js         # 分页 / 懒加载 hooks
-        ├── App.jsx          # 外壳：仓库选择器 + 底部 Tab + 路由
+        ├── App.jsx          # 外壳：仓库选择器 + 底部 Tab（Issues / PRs / 云开发）+ 路由
         ├── components/      # UI 组件、卡片、懒加载 Tab、合并弹层
-        └── pages/           # Issue、PR 与构建页面
+        └── pages/           # Issue、PR、构建与云开发页面
+
 ```
 
 ## 注意

@@ -51,7 +51,9 @@ if (!TOKEN) {
 }
 
 // CNB 顶层路径白名单，非白名单一律拒绝，避免被当成任意 URL 代理
-const ALLOWED_TOP = new Set(['user', 'users', 'search', 'events', 'ranks']);
+// workspace 是「我的云原生开发环境」的顶层接口（/workspace/list|stop|delete），
+// 不属于任何仓库，单靠 org/repo 规则放行不了，需显式列入。
+const ALLOWED_TOP = new Set(['user', 'users', 'search', 'events', 'ranks', 'workspace']);
 
 // ---------- 工具 ----------
 

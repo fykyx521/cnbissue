@@ -169,3 +169,31 @@ export function formatDuration(ms) {
   const h = Math.floor(m / 60);
   return `${h}h${m % 60}m`;
 }
+
+// ---------- 云原生开发（Workspace） ----------
+
+// 工作区状态只有 running / closed 两种（见 dto.WorkspaceInfo.status）
+export const WORKSPACE_STATES = [
+  { value: 'running', label: '运行中' },
+  { value: 'closed', label: '已关闭' },
+  { value: '', label: '全部' },
+];
+
+export const WORKSPACE_STATE = {
+  running: { label: '运行中', tone: 'badge-open', ico: '●' },
+  closed: { label: '已关闭', tone: 'badge-closed', ico: '○' },
+};
+
+/** 工作区存活时长（毫秒，非实时）→「3 小时 12 分」。与构建的 formatDuration 区分开 */
+export function formatWorkspaceDuration(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const mins = Math.floor(n / 60000);
+  if (mins < 1) return '不到 1 分钟';
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+  if (days >= 1) return `${days} 天 ${hours % 24} 小时`;
+  if (hours >= 1) return `${hours} 小时 ${mins % 60} 分`;
+  return `${mins} 分钟`;
+}
+

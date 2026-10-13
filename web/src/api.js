@@ -442,3 +442,56 @@ export const startBuild = (repo, body) =>
 
 /** 停止一个进行中的构建 */
 export const stopBuild = (repo, sn) => api.post(`/${repoSeg(repo)}/-/build/stop/${snSeg(sn)}`);
+// ---------- 分支 ----------
+
+/** 仓库分支列表。启动开发环境时要选一个分支（或 tag）作为起点 */
+export const listBranches = (repo, query) =>
+  api.get(`/${repoSeg(repo)}/-/git/branches`, query);
+
+// ---------- 云原生开发（Workspace） ----------
+//
+// 「我的云原生开发环境」在 CNB OpenAPI 里分两组：
+//
+//   顶层（不挂仓库，令牌需 account-engage:r / rw）
+//     GET  /workspace/list    分页列出当前用户的全部开发环境
+//     POST /workspace/stop    停止/关闭指定环境，body: { sn } 或 { pipelineId }
+//     POST /workspace/delete  删除指定环境及关联资源，body: { sn } 或 { pipelineId }
+//
+//   仓库维度（令牌需 repo-cnb-trigger:rw 启动、repo-cnb-detail:r 读地址）
+//     POST /{repo}/-/workspace/start        启动；已存在则直接打开，否则新建
+//     GET  /{repo}/-/workspace/detail/{sn}  取 WebIDE / SSH / 各类客户端连接地址
+//
+// 列表与操作按用户维度走，不要求先选仓库；只有启动/取详情才需要仓库。
+// 详见 https://docs.cnb.cool/zh/workspaces/intro.html
+
+/** 我的开发环境列表。slug / branch / status(running|closed) / 时间区间均可作筛选 */
+export const listWorkspaces = (query) => api.get('/workspace/list', query);
+
+/** 停止开发环境。传 sn（构建号）或 pipelineId，二选一 */
+export const stopWorkspace = (target) => api.post('/workspace/stop', workspaceTarget(target));
+
+/** 删除开发环境及其关联资源（代码备份等） */
+export const deleteWorkspace = (target) =>
+  api.post('/workspace/delete', workspaceTarget(target));
+
+/** 启动开发环境：已存在直接打开，否则新建。必须带仓库 */
+export const startWorkspace = (repo, body) =>
+  api.post(`/${repoSeg(repo)}/-/workspace/start`, body || {});
+
+/** 取开发环境的访问地址（WebIDE、SSH、各客户端 remote-ssh schema） */
+export const getWorkspaceDetail = (repo, sn) =>
+  api.get(`/${repoSeg(repo)}/-/workspace/detail/${snSeg(sn)}`);
+
+// 停止/删除都以流水线身份定位环境，sn 与 pipelineId 二选一。
+// sn 可能不是纯数字（如 w-xxxx），因此这里不做数字校验，只挡空值。
+function workspaceTarget(target) {
+  if (target && typeof target === 'object') {
+    const { sn, pipelineId } = target;
+    if (pipelineId) return { pipelineId: String(pipelineId) };
+    if (sn) return { sn: String(sn) };
+  }
+  const value = String(target || '');
+  if (!value) throw new ApiError('缺少环境标识（sn 或 pipelineId）', 0, null);
+  return { sn: value };
+}
+

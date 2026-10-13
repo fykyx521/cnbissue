@@ -7,6 +7,8 @@ import {
   MERGEABLE_STATE,
   buildStatusOf,
   formatDuration,
+  formatWorkspaceDuration,
+  WORKSPACE_STATE,
 } from '../constants.js';
 
 export function UserTag({ user, suffix }) {
@@ -178,6 +180,56 @@ export function BuildCard({ build }) {
           </>
         )}
       </div>
+    </Link>
+  );
+}
+
+/**
+ * 云原生开发环境卡片。
+ *
+ * 环境不挂在 Issue/PR 上，点击进入详情页看连接地址；
+ * 卡片本身给出一眼能判断的信息：仓库、分支、状态、存活时长、备份。
+ */
+export function WorkspaceCard({ ws }) {
+  const state = WORKSPACE_STATE[ws.status] || WORKSPACE_STATE.closed;
+  return (
+    <Link className="card" to={`/workspaces/${encodeURIComponent(ws.slug)}/${ws.sn}`}>
+      <div className="card-head">
+        <div className="card-title">{ws.slug || '未知仓库'}</div>
+        <span className={`tag ${state.tone} dot`}>{state.label}</span>
+      </div>
+      <div className="branchline">
+        <span>{ws.branch || '未知分支'}</span>
+        {ws.latest_sha && (
+          <>
+            <span className="sep">·</span>
+            <span>{shortSha(ws.latest_sha)}</span>
+          </>
+        )}
+      </div>
+      <div className="card-meta">
+        <span>{formatTime(ws.create_time)}</span>
+        {ws.duration > 0 && (
+          <>
+            <span className="sep">·</span>
+            <span>存活 {formatWorkspaceDuration(ws.duration)}</span>
+          </>
+        )}
+        {ws.ssh && <span className="tag">SSH</span>}
+      </div>
+      {ws.status === 'closed' && (ws.file_count > 0 || ws.commit_count > 0) && (
+        <div className="card-meta">
+          <span>
+            备份 {ws.file_count || 0} 文件 / {ws.commit_count || 0} 提交
+          </span>
+          {ws.restore_id && (
+            <>
+              <span className="sep">·</span>
+              <span>已恢复</span>
+            </>
+          )}
+        </div>
+      )}
     </Link>
   );
 }
