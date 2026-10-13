@@ -54,13 +54,17 @@ export default function IssueEdit() {
         toast('已保存', 'ok');
         nav(`/issues/${number}`, { replace: true });
       } else {
-        const created = await createIssue(repoPath, {
-          title: title.trim(),
-          body,
-          priority: priority || undefined,
-          labels: labels.split(/[\s,，]+/).filter(Boolean),
-          assignees: assignees.split(/[\s,，]+/).filter(Boolean),
-        });
+        const created = await createIssue(
+          repoPath,
+          {
+            title: title.trim(),
+            body,
+            priority: priority || undefined,
+            labels: labels.split(/[\s,，]+/).filter(Boolean),
+            assignees: assignees.split(/[\s,，]+/).filter(Boolean),
+          },
+          workMode
+        );
         toast('Issue 已创建', 'ok');
         nav(`/issues/${created.number}`, { replace: true });
       }

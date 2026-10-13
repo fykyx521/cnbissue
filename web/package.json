@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/asset-url.test.mjs && node test/comment-shortcuts.test.mjs && node test/repo-switch.test.mjs && node test/theme.test.mjs && node test/build-status.test.mjs && node test/workspace.test.mjs"
+    "test": "node test/asset-url.test.mjs && node test/comment-shortcuts.test.mjs && node test/repo-switch.test.mjs && node test/theme.test.mjs && node test/build-status.test.mjs && node test/workspace.test.mjs && node test/work-mode-create.test.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

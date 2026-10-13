@@ -50,13 +50,17 @@ export default function PullEdit() {
         toast('已保存', 'ok');
         nav(`/pulls/${number}`, { replace: true });
       } else {
-        const created = await createPull(repoPath, {
-          title: title.trim(),
-          body,
-          head: head.trim(),
-          base: base.trim(),
-          head_repo: headRepo.trim() || undefined,
-        });
+        const created = await createPull(
+          repoPath,
+          {
+            title: title.trim(),
+            body,
+            head: head.trim(),
+            base: base.trim(),
+            head_repo: headRepo.trim() || undefined,
+          },
+          workMode
+        );
         toast('PR 已创建', 'ok');
         nav(`/pulls/${created.number}`, { replace: true });
       }

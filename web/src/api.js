@@ -134,7 +134,8 @@ export const listOrgRepos = (org, query) => api.get(`/${orgSeg(org)}/-/repos`, q
 
 export const listIssues = (repo, query) => api.get(`/${repoSeg(repo)}/-/issues`, query);
 export const getIssue = (repo, number) => api.get(`/${repoSeg(repo)}/-/issues/${numSeg(number)}`);
-export const createIssue = (repo, body) => api.post(`/${repoSeg(repo)}/-/issues`, body);
+export const createIssue = (repo, body, workMode = false) =>
+  api.post(`/${repoSeg(repo)}/-/issues`, { ...body, ...workModeBody(workMode) });
 export const patchIssue = (repo, number, body) =>
   api.patch(`/${repoSeg(repo)}/-/issues/${numSeg(number)}`, body);
 
@@ -157,6 +158,8 @@ export const createIssueComment = (repo, number, body, workMode = false) =>
  * 「替我上班」（NPC 工作模式）在写接口上的字段名是 `work_mode`。
  *
  * 只有这 5 个接口接受该字段（见 CNB OpenAPI）：
+ *   （前两条是「新建」接口：新建 Issue / 新建 PR 时带上，NPC 才会开工，
+ *     否则只是建了个单子，没人动代码）
  *   POST /{repo}/-/issues                                    创建 Issue
  *   POST /{repo}/-/issues/{number}/comments                   Issue 评论
  *   POST /{repo}/-/pulls/{number}/comments                    PR 评论
@@ -393,7 +396,8 @@ export function assetsToMarkdown(assets) {
 
 export const listPulls = (repo, query) => api.get(`/${repoSeg(repo)}/-/pulls`, query);
 export const getPull = (repo, number) => api.get(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}`);
-export const createPull = (repo, body) => api.post(`/${repoSeg(repo)}/-/pulls`, body);
+export const createPull = (repo, body, workMode = false) =>
+  api.post(`/${repoSeg(repo)}/-/pulls`, { ...body, ...workModeBody(workMode) });
 export const patchPull = (repo, number, body) =>
   api.patch(`/${repoSeg(repo)}/-/pulls/${numSeg(number)}`, body);
 
